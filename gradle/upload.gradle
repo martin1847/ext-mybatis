@@ -1,0 +1,29 @@
+apply plugin: 'maven-publish'
+
+java {
+//    withJavadocJar()
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        library(MavenPublication) {
+            from components.java
+        }
+    }
+
+    repositories{
+        maven{
+            url "$MAVEN_REPO"
+            credentials(HttpHeaderCredentials) {
+                name = "X-JFrog-Art-API"
+                value = System.getenv("JCR_TOKEN" )?:"$JCR_TOKEN"
+            }
+            authentication {
+                header(HttpHeaderAuthentication)
+            }
+        }
+    }
+
+}
+

@@ -1,0 +1,20 @@
+---
+name: "BT MyBatis SQL Mapper"
+metadata:
+  keywords:
+    - "mybatis"
+  guide: "https://quarkus.io/guides/mybatis"
+  categories:
+    - "data"
+  status: "preview"
+  built-with-quarkus-core: "2.4.0.Final"
+  extension-dependencies:
+    - "io.quarkus:quarkus-arc"
+    - "io.quarkus:quarkus-core"
+    - "io.quarkus:quarkus-agroal"
+    - "io.quarkus:quarkus-datasource"
+    - "io.quarkus:quarkus-narayana-jta"
+    - "io.quarkus:quarkus-mutiny"
+    - "io.quarkus:quarkus-smallrye-context-propagation"
+#artifact: "io.quarkiverse.mybatis:quarkus-mybatis::jar:0.0.10"
+description: "MyBatis SQL mapper framework for Java"

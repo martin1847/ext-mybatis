@@ -1,0 +1,18 @@
+plugins {
+    id "io.quarkus.extension"// version "2.4.0.Final"
+}
+//apply plugin:  'io.quarkus.extensions'
+
+quarkusExtension {
+    deploymentModule = 'deployment'
+}
+
+dependencies {
+    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
+
+    api "io.quarkus:quarkus-arc"
+    api "io.quarkus:quarkus-agroal"
+    api 'org.mybatis:mybatis:3.5.7'
+    implementation 'org.graalvm.nativeimage:svm'
+    annotationProcessor("io.quarkus:quarkus-extension-processor:${quarkusPlatformVersion}")
+}
