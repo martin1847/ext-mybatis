@@ -1,83 +1,128 @@
 package com.bt.mybatis.runtime;
 
-import java.io.PrintWriter;
-import java.io.Reader;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.SQLFeatureNotSupportedException;
-import java.util.List;
-import java.util.Optional;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
-import javax.sql.DataSource;
-
-import com.bt.mybatis.runtime.config.MyBatisDataSourceRuntimeConfig;
-import com.bt.mybatis.runtime.config.MyBatisRuntimeConfig;
-import org.apache.ibatis.executor.loader.cglib.CglibProxyFactory;
-import org.apache.ibatis.executor.loader.javassist.JavassistProxyFactory;
+import io.quarkus.runtime.RuntimeValue;
+import io.quarkus.runtime.annotations.Recorder;
+import org.apache.ibatis.builder.xml.XMLConfigBuilder;
+import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.io.Resources;
-import org.apache.ibatis.io.VFS;
-import org.apache.ibatis.jdbc.ScriptRunner;
-import org.apache.ibatis.logging.Log;
-import org.apache.ibatis.mapping.Environment;
-import org.apache.ibatis.scripting.LanguageDriver;
 import org.apache.ibatis.session.Configuration;
-import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.apache.ibatis.session.SqlSessionFactoryBuilder;
 import org.apache.ibatis.session.SqlSessionManager;
-import org.apache.ibatis.transaction.TransactionFactory;
-import org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory;
-import org.apache.ibatis.transaction.managed.ManagedTransactionFactory;
-import org.apache.ibatis.type.TypeHandler;
 import org.jboss.logging.Logger;
-
-import io.agroal.api.AgroalDataSource;
-import io.quarkus.agroal.runtime.DataSources;
-import io.quarkus.runtime.RuntimeValue;
-import io.quarkus.runtime.annotations.Recorder;
 
 @Recorder
 public class MyBatisRecorder {
     private static final Logger LOG = Logger.getLogger(MyBatisRecorder.class);
 
-    public RuntimeValue<SqlSessionFactory> createSqlSessionFactory(
-            MyBatisRuntimeConfig config, XMLConfigDelegateBuilder builder) {
-        Configuration configuration;
+    public RuntimeValue<SqlSessionFactory> createSqlSessionFactory(ConfigurationFactory factory) throws IOException, URISyntaxException {
+        Configuration cfg  = factory.createConfiguration();
 
-        try {
-            builder.setConfig(config);
-            builder.getConfiguration().getTypeAliasRegistry().registerAlias("QUARKUS", QuarkusDataSourceFactory.class);
-            configuration = builder.parse();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        String xmlFolder = cfg.getVariables().getProperty("SqlXmlFolder");
+
+
+
+
+        URL resource =  Resources.getResourceURL(xmlFolder);
+
+        var sqlMaps =  Files.walk(Paths.get(resource.toURI()))
+                .filter(Files::isRegularFile)
+                .map(x -> xmlFolder +"/" + x.getName(x.getNameCount()-1))
+                .collect(Collectors.toList());
+
+        for(var sqlMap : sqlMaps) {
+
+            try (InputStream inputStream = Resources.getResourceAsStream(sqlMap)) {
+                XMLMapperBuilder mapperParser = new XMLMapperBuilder(inputStream, cfg, sqlMap, cfg.getSqlFragments());
+                mapperParser.parse();
+
+                System.out.println(" :::: 125 ::: add Sql Map :::  "+sqlMap);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
-        SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().build(configuration);
+        SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().build(cfg);
         return new RuntimeValue<>(sqlSessionFactory);
     }
 
-    public RuntimeValue<Configuration> createConfiguration() {
-        return new RuntimeValue<>(new Configuration());
+    public RuntimeValue<SqlSessionManager> createSqlSessionManager(RuntimeValue<SqlSessionFactory> sqlSessionFactory) {
+        SqlSessionManager sqlSessionManager = SqlSessionManager.newInstance(sqlSessionFactory.getValue());
+        return new RuntimeValue<>(sqlSessionManager);
     }
 
-    public RuntimeValue<SqlSessionFactory> createSqlSessionFactory(
-            ConfigurationFactory configurationFactory,
-            SqlSessionFactoryBuilder builder,
-            MyBatisRuntimeConfig myBatisRuntimeConfig,
-            MyBatisDataSourceRuntimeConfig myBatisDataSourceRuntimeConfig,
-            String dataSourceName,
-            List<String> mappers,
-            List<String> mappedTypes,
-            List<String> mappedJdbcTypes) {
-        Configuration configuration = configurationFactory.createConfiguration();
-        setupConfiguration(configuration, myBatisRuntimeConfig, myBatisDataSourceRuntimeConfig, dataSourceName);
-        addMappers(configuration, mappedTypes, mappedJdbcTypes, mappers);
+    public Supplier<Object> MyBatisMapperSupplier(String name, RuntimeValue<SqlSessionManager> sqlSessionManager) {
+        return () -> {
+            try {
+                System.out.println("MyBatisRecorder getMapper ::" + name  );
 
-        SqlSessionFactory sqlSessionFactory = builder.build(configuration);
-        return new RuntimeValue<>(sqlSessionFactory);
+                var mapper =  sqlSessionManager.getValue().getMapper(Resources.classForName(name));
+                System.out.println("MyBatisRecorder getMapper ::" + name  +"  --> "+ mapper);
+                return  mapper;
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+                System.out.println("MyBatisRecorder getMapperError ::" + name );
+                return null;
+            }
+        };
     }
 
+    public Supplier<Object> MyBatisMappedTypeSupplier(String name, RuntimeValue<SqlSessionManager> sqlSessionManager) {
+        return () -> {
+            try {
+                return sqlSessionManager.getValue().getConfiguration().getTypeHandlerRegistry()
+                        .getTypeHandler(Resources.classForName(name));
+            } catch (ClassNotFoundException e) {
+                return null;
+            }
+        };
+    }
+
+    public Supplier<Object> MyBatisMappedJdbcTypeSupplier(String name, RuntimeValue<SqlSessionManager> sqlSessionManager) {
+        return () -> {
+            try {
+                return sqlSessionManager.getValue().getConfiguration().getTypeHandlerRegistry()
+                        .getTypeHandler(Resources.classForName(name));
+            } catch (ClassNotFoundException e) {
+                return null;
+            }
+        };
+    }
+
+    public Supplier<Object> MyBatisSqlSessionFactorySupplier(RuntimeValue<SqlSessionFactory> sqlSessionFactory) {
+        return sqlSessionFactory::getValue;
+    }
+}
+    //public RuntimeValue<Configuration> createConfiguration() {
+    //    return new RuntimeValue<>(new Configuration());
+    //}
+    //
+    //public RuntimeValue<SqlSessionFactory> createSqlSessionFactory(
+    //        ConfigurationFactory configurationFactory,
+    //        SqlSessionFactoryBuilder builder,
+    //        MyBatisRuntimeConfig myBatisRuntimeConfig,
+    //        MyBatisDataSourceRuntimeConfig myBatisDataSourceRuntimeConfig,
+    //        String dataSourceName,
+    //        List<String> mappers,
+    //        List<String> mappedTypes,
+    //        List<String> mappedJdbcTypes) {
+    //    Configuration configuration = configurationFactory.createConfiguration();
+    //    setupConfiguration(configuration, myBatisRuntimeConfig, myBatisDataSourceRuntimeConfig, dataSourceName);
+    //    addMappers(configuration, mappedTypes, mappedJdbcTypes, mappers);
+    //
+    //    SqlSessionFactory sqlSessionFactory = builder.build(configuration);
+    //    return new RuntimeValue<>(sqlSessionFactory);
+    //}
+/*
     private void addMappers(Configuration configuration,
             List<String> mappedTypes, List<String> mappedJdbcTypes, List<String> mappers) {
         for (String mappedType : mappedTypes) {
@@ -290,46 +335,7 @@ public class MyBatisRecorder {
         return configuration;
     }
 
-    public RuntimeValue<SqlSessionManager> createSqlSessionManager(RuntimeValue<SqlSessionFactory> sqlSessionFactory) {
-        SqlSessionManager sqlSessionManager = SqlSessionManager.newInstance(sqlSessionFactory.getValue());
-        return new RuntimeValue<>(sqlSessionManager);
-    }
 
-    public Supplier<Object> MyBatisMapperSupplier(String name, RuntimeValue<SqlSessionManager> sqlSessionManager) {
-        return () -> {
-            try {
-                return sqlSessionManager.getValue().getMapper(Resources.classForName(name));
-            } catch (ClassNotFoundException e) {
-                return null;
-            }
-        };
-    }
-
-    public Supplier<Object> MyBatisMappedTypeSupplier(String name, RuntimeValue<SqlSessionManager> sqlSessionManager) {
-        return () -> {
-            try {
-                return sqlSessionManager.getValue().getConfiguration().getTypeHandlerRegistry()
-                        .getTypeHandler(Resources.classForName(name));
-            } catch (ClassNotFoundException e) {
-                return null;
-            }
-        };
-    }
-
-    public Supplier<Object> MyBatisMappedJdbcTypeSupplier(String name, RuntimeValue<SqlSessionManager> sqlSessionManager) {
-        return () -> {
-            try {
-                return sqlSessionManager.getValue().getConfiguration().getTypeHandlerRegistry()
-                        .getTypeHandler(Resources.classForName(name));
-            } catch (ClassNotFoundException e) {
-                return null;
-            }
-        };
-    }
-
-    public Supplier<Object> MyBatisSqlSessionFactorySupplier(RuntimeValue<SqlSessionFactory> sqlSessionFactory) {
-        return sqlSessionFactory::getValue;
-    }
 
     public void runInitialSql(RuntimeValue<SqlSessionFactory> sqlSessionFactory, String sql) {
         try (SqlSession session = sqlSessionFactory.getValue().openSession()) {
@@ -343,66 +349,8 @@ public class MyBatisRecorder {
             LOG.warn("Error executing SQL Script " + sql, e);
         }
     }
-}
+    */
 
-class QuarkusDataSource implements DataSource {
-    private String dataSourceName;
-    private AgroalDataSource dataSource;
 
-    public QuarkusDataSource(String dataSourceName) {
-        this.dataSourceName = dataSourceName;
-        this.dataSource = null;
-    }
 
-    private DataSource getDataSource() {
-        if (dataSource == null) {
-            dataSource = DataSources.fromName(dataSourceName);
-        }
-        return dataSource;
-    }
 
-    @Override
-    public Connection getConnection() throws SQLException {
-        return getDataSource().getConnection();
-    }
-
-    @Override
-    public Connection getConnection(String user, String passwd) throws SQLException {
-        return getDataSource().getConnection(user, passwd);
-    }
-
-    @Override
-    public <T> T unwrap(Class<T> aClass) throws SQLException {
-        return getDataSource().unwrap(aClass);
-    }
-
-    @Override
-    public boolean isWrapperFor(Class<?> aClass) throws SQLException {
-        return getDataSource().isWrapperFor(aClass);
-    }
-
-    @Override
-    public PrintWriter getLogWriter() throws SQLException {
-        return getDataSource().getLogWriter();
-    }
-
-    @Override
-    public void setLogWriter(PrintWriter printWriter) throws SQLException {
-        getDataSource().setLogWriter(printWriter);
-    }
-
-    @Override
-    public void setLoginTimeout(int timeout) throws SQLException {
-        getDataSource().setLoginTimeout(timeout);
-    }
-
-    @Override
-    public int getLoginTimeout() throws SQLException {
-        return getDataSource().getLoginTimeout();
-    }
-
-    @Override
-    public java.util.logging.Logger getParentLogger() throws SQLFeatureNotSupportedException {
-        return getDataSource().getParentLogger();
-    }
-}
