@@ -16,40 +16,40 @@ public class MyConfig {
     //public Map<String, MyBatisDataSourceRuntimeConfig> dataSources;
 
     /**
-     * mybatis-config.xml files, 多个使用英文逗号隔开
+     * mybatis-config.xml files path, use `,` for more than one .
      */
     @ConfigItem(defaultValue = "mybatis-config.xml")
     public String configFiles;
 
 
-    /**
-     * Support XML Configuration
-     */
-    @ConfigItem
-    public XmlConfig xmlconfig;
-
-    @ConfigGroup
-    public static class XmlConfig {
-        /**
-         * enable mybatis xml configuration
-         */
-        @ConfigItem(defaultValue = "false")
-        public boolean enable;
-
-        /**
-         * xml configuration file
-         */
-        @ConfigItem(defaultValue = "mybatis-config.xml")
-        public String path;
-
-        @Override
-        public String toString() {
-            return "XmlConfig{" +
-                    "enable=" + enable +
-                    ", path='" + path + '\'' +
-                    '}';
-        }
-    }
+    ///**
+    // * Support XML Configuration
+    // */
+    //@ConfigItem
+    //public XmlConfig xmlconfig;
+    //
+    //@ConfigGroup
+    //public static class XmlConfig {
+    //    /**
+    //     * enable mybatis xml configuration
+    //     */
+    //    @ConfigItem(defaultValue = "false")
+    //    public boolean enable;
+    //
+    //    /**
+    //     * xml configuration file
+    //     */
+    //    @ConfigItem(defaultValue = "mybatis-config.xml")
+    //    public String path;
+    //
+    //    @Override
+    //    public String toString() {
+    //        return "XmlConfig{" +
+    //                "enable=" + enable +
+    //                ", path='" + path + '\'' +
+    //                '}';
+    //    }
+    //}
     //
     ///**
     // * MyBatis environment id
