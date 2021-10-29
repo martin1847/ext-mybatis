@@ -1,4 +1,4 @@
-package com.bt.mybatis.runtime.config;
+package com.bt.mybatis.runtime;
 
 import io.quarkus.runtime.annotations.ConfigGroup;
 import io.quarkus.runtime.annotations.ConfigItem;
@@ -6,7 +6,7 @@ import io.quarkus.runtime.annotations.ConfigPhase;
 import io.quarkus.runtime.annotations.ConfigRoot;
 
 @ConfigRoot(name = "mybatis", phase = ConfigPhase.BUILD_AND_RUN_TIME_FIXED)
-public class MyBatisRuntimeConfig {
+public class MyConfig {
     ///**
     // * Data sources config
     // */

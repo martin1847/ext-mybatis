@@ -1,10 +1,10 @@
 package com.bt.mybatis.deployment;
 
-import com.bt.mybatis.runtime.QuarkusDataSourceFactory;
+import com.bt.mybatis.runtime.bridge.QuarkusDataSourceFactory;
 import io.quarkus.builder.item.MultiBuildItem;
 
 // need to be serialize
-public final class ConfigurationBuildItem extends MultiBuildItem  {
+public final class ConfigurationMBI extends MultiBuildItem  {
 
 
 
@@ -15,15 +15,15 @@ public final class ConfigurationBuildItem extends MultiBuildItem  {
 
     //private  Configuration cfg;
 
-    public ConfigurationBuildItem(){
+    public ConfigurationMBI(){
 
     }
 
-    public ConfigurationBuildItem(String mybatisConfigFile){
+    public ConfigurationMBI(String mybatisConfigFile){
         this(mybatisConfigFile,null);
     }
 
-    public ConfigurationBuildItem(String mybatisConfigFile, String dataSourceName) {
+    public ConfigurationMBI(String mybatisConfigFile, String dataSourceName) {
 
         this.mybatisConfigFile = mybatisConfigFile;
         this.dataSourceName = dataSourceName;

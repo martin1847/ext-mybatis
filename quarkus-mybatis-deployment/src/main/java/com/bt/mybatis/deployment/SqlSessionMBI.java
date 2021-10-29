@@ -9,7 +9,7 @@ import org.apache.ibatis.session.SqlSessionManager;
 /**
  * Hold the RuntimeValue of {@link SqlSessionFactory}
  */
-public final class SqlSessionFactoryBuildItem extends MultiBuildItem {
+public final class SqlSessionMBI extends MultiBuildItem {
     private final RuntimeValue<SqlSessionFactory> sqlSessionFactory;
 
 
@@ -19,8 +19,8 @@ public final class SqlSessionFactoryBuildItem extends MultiBuildItem {
     private final String dataSourceName;
     private final boolean defaultDataSource;
 
-    public SqlSessionFactoryBuildItem(RuntimeValue<SqlSessionFactory> sqlSessionFactory,
-                                      RuntimeValue<SqlSessionManager> sqlSessionManager, String dataSourceName, boolean defaultDataSource) {
+    public SqlSessionMBI(RuntimeValue<SqlSessionFactory> sqlSessionFactory,
+                         RuntimeValue<SqlSessionManager> sqlSessionManager, String dataSourceName, boolean defaultDataSource) {
         this.sqlSessionFactory = sqlSessionFactory;
         this.sqlSessionManager = sqlSessionManager;
         this.dataSourceName = dataSourceName;

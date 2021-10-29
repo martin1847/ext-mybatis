@@ -1,4 +1,4 @@
-package com.bt.mybatis.runtime;
+package com.bt.mybatis.runtime.bridge;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -7,17 +7,17 @@ import org.apache.ibatis.builder.xml.XMLConfigBuilder;
 import org.apache.ibatis.io.Resources;
 import org.apache.ibatis.session.Configuration;
 
-public class MyBatisConfigurationFactory implements ConfigurationFactory {
+public class XmlConfigurationFactory implements ConfigurationFactory {
 
 
 
     private String mybatisConfigFile;
 
-    public MyBatisConfigurationFactory(){
+    public XmlConfigurationFactory(){
 
     }
 
-    public MyBatisConfigurationFactory(String mybatisConfigFile){
+    public XmlConfigurationFactory(String mybatisConfigFile){
         this.mybatisConfigFile = mybatisConfigFile;
     }
 

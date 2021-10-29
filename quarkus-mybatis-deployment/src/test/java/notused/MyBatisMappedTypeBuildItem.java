@@ -1,4 +1,4 @@
-package com.bt.mybatis.deployment;
+package notused;
 
 import org.jboss.jandex.DotName;
 

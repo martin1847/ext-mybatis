@@ -1,4 +1,4 @@
-package com.bt.mybatis.deployment;
+package notused;
 
 import io.quarkus.builder.item.SimpleBuildItem;
 

@@ -9,9 +9,9 @@ import java.nio.file.Paths;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import com.bt.mybatis.runtime.bridge.ConfigurationFactory;
 import io.quarkus.runtime.RuntimeValue;
 import io.quarkus.runtime.annotations.Recorder;
-import org.apache.ibatis.builder.xml.XMLConfigBuilder;
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.io.Resources;
 import org.apache.ibatis.session.Configuration;
@@ -21,8 +21,8 @@ import org.apache.ibatis.session.SqlSessionManager;
 import org.jboss.logging.Logger;
 
 @Recorder
-public class MyBatisRecorder {
-    private static final Logger LOG = Logger.getLogger(MyBatisRecorder.class);
+public class MyRecorder {
+    private static final Logger LOG = Logger.getLogger(MyRecorder.class);
 
     public RuntimeValue<SqlSessionFactory> createSqlSessionFactory(ConfigurationFactory factory) throws IOException, URISyntaxException {
         Configuration cfg  = factory.createConfiguration();

@@ -1,4 +1,4 @@
-package com.bt.mybatis.runtime;
+package com.bt.mybatis.runtime.bridge;
 
 import java.util.Properties;
 

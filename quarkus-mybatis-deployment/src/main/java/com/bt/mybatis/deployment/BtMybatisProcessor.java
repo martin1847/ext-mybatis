@@ -1,21 +1,16 @@
 package com.bt.mybatis.deployment;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import com.bt.mybatis.runtime.MyBatisConfigurationFactory;
-import com.bt.mybatis.runtime.MyBatisRecorder;
-import com.bt.mybatis.runtime.QuarkusDataSource;
-import com.bt.mybatis.runtime.QuarkusDataSourceFactory;
-import com.bt.mybatis.runtime.config.MyBatisRuntimeConfig;
+import com.bt.mybatis.runtime.MyConfig;
+import com.bt.mybatis.runtime.MyRecorder;
+import com.bt.mybatis.runtime.bridge.QuarkusDataSource;
+import com.bt.mybatis.runtime.bridge.QuarkusDataSourceFactory;
+import com.bt.mybatis.runtime.bridge.XmlConfigurationFactory;
 import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
@@ -33,10 +28,8 @@ import org.apache.ibatis.annotations.ResultType;
 import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.SelectProvider;
 import org.apache.ibatis.annotations.UpdateProvider;
-import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.cache.decorators.LruCache;
 import org.apache.ibatis.cache.impl.PerpetualCache;
-import org.apache.ibatis.io.Resources;
 import org.apache.ibatis.javassist.util.proxy.ProxyFactory;
 import org.apache.ibatis.logging.log4j.Log4jImpl;
 import org.apache.ibatis.scripting.defaults.RawLanguageDriver;
@@ -47,10 +40,10 @@ import org.apache.ibatis.type.EnumTypeHandler;
 import org.jboss.jandex.DotName;
 import org.jboss.logging.Logger;
 
-public class MyBatisProcessor {
+public class BtMybatisProcessor {
 
-    private static final Logger LOG = Logger.getLogger(MyBatisProcessor.class);
-    private static final String FEATURE = "mybatis";
+    private static final Logger LOG = Logger.getLogger(BtMybatisProcessor.class);
+    private static final String FEATURE = "bt-mybatis";
     //private static final DotName MYBATIS_MAPPER = DotName.createSimple(Mapper.class.getName());
     //private static final DotName MYBATIS_TYPE_HANDLER = DotName.createSimple(MappedTypes.class.getName());
     //private static final DotName MYBATIS_JDBC_TYPE_HANDLER = DotName.createSimple(MappedJdbcTypes.class.getName());
@@ -88,10 +81,10 @@ public class MyBatisProcessor {
 
 
     @BuildStep
-    void addConfigurations(MyBatisRuntimeConfig config,
-                            BuildProducer<ConfigurationBuildItem> configurations,
-                           BuildProducer<MyBatisMapperBuildItem> mappers,
-                            BuildProducer<ReflectiveClassBuildItem> reflective,
+    void addConfigurations(MyConfig config,
+                           BuildProducer<ConfigurationMBI> configurations,
+                           BuildProducer<MapperMBI> mappers,
+                           BuildProducer<ReflectiveClassBuildItem> reflective,
                            BuildProducer<NativeImageProxyDefinitionBuildItem> proxy) throws Exception{
 
         var files = config.configFiles.split(",");
@@ -99,7 +92,7 @@ public class MyBatisProcessor {
         for(var configFile : files){
             LOG.info("found config file : " + configFile);
 
-            var cfg = new MyBatisConfigurationFactory(configFile).createConfiguration();
+            var cfg = new XmlConfigurationFactory(configFile).createConfiguration();
 
             // TODO sql Mapfiles static init
 
@@ -113,7 +106,7 @@ public class MyBatisProcessor {
                proxy.produce(new NativeImageProxyDefinitionBuildItem(mapCls.getName()));
 
                System.out.println(" :::: 135 ::: add Mapper Class for Reflective and Proxy :::  "+mapCls.getName());
-               mappers.produce(new MyBatisMapperBuildItem(DotName.createSimple(mapCls.getName()), dsName));
+               mappers.produce(new MapperMBI(DotName.createSimple(mapCls.getName()), dsName));
            }
 
            var alias = cfg.getTypeAliasRegistry().getTypeAliases();
@@ -124,20 +117,20 @@ public class MyBatisProcessor {
                }
            });
 
-            configurations.produce(new ConfigurationBuildItem(configFile,dsName));
+            configurations.produce(new ConfigurationMBI(configFile,dsName));
         }
     }
 
     @Record(ExecutionTime.STATIC_INIT)
     @BuildStep
-    void generateSqlSessionFactorys(List<ConfigurationBuildItem> configurationBuildItems,
-            BuildProducer<SqlSessionFactoryBuildItem> sqlSessionFactory,
-            MyBatisRecorder recorder) throws  Exception {
-        for(var cbi : configurationBuildItems) {
+    void generateSqlSessionFactorys(List<ConfigurationMBI> configurationMBIS,
+            BuildProducer<SqlSessionMBI> sqlSessionFactory,
+            MyRecorder recorder) throws  Exception {
+        for(var cbi : configurationMBIS) {
             var factoryRuntime  = recorder.createSqlSessionFactory(
-                    new MyBatisConfigurationFactory(cbi.getMybatisConfigFile()));
+                    new XmlConfigurationFactory(cbi.getMybatisConfigFile()));
             sqlSessionFactory.produce(
-                    new SqlSessionFactoryBuildItem(factoryRuntime
+                    new SqlSessionMBI(factoryRuntime
                             , recorder.createSqlSessionManager(factoryRuntime)
                             , cbi.getDataSourceName(), cbi.isDefaultDs()));
         }
@@ -146,17 +139,17 @@ public class MyBatisProcessor {
 
     @Record(ExecutionTime.STATIC_INIT)
     @BuildStep
-    void register(List<SqlSessionFactoryBuildItem> sqlSessionFactoryBuildItems,
+    void register(List<SqlSessionMBI> sqlSessionMBIS,
                   BuildProducer<SyntheticBeanBuildItem> syntheticBeanBuildItemBuildProducer,
-                  MyBatisRecorder recorder) {
-        sqlSessionFactoryBuildItems.forEach(sqlSessionFactoryBuildItem -> {
+                  MyRecorder recorder) {
+        sqlSessionMBIS.forEach(sqlSessionMBI -> {
             SyntheticBeanBuildItem.ExtendedBeanConfigurator configurator = SyntheticBeanBuildItem
                     .configure(SqlSessionFactory.class)
                     .scope(Singleton.class)
                     .unremovable()
-                    .supplier(recorder.MyBatisSqlSessionFactorySupplier(sqlSessionFactoryBuildItem.getSqlSessionFactory()));
-            String dataSourceName = sqlSessionFactoryBuildItem.getDataSourceName();
-            if (!sqlSessionFactoryBuildItem.isDefaultDataSource()) {
+                    .supplier(recorder.MyBatisSqlSessionFactorySupplier(sqlSessionMBI.getSqlSessionFactory()));
+            String dataSourceName = sqlSessionMBI.getDataSourceName();
+            if (!sqlSessionMBI.isDefaultDataSource()) {
                 configurator.defaultBean();
                 configurator.addQualifier().annotation(Named.class).addValue("value", dataSourceName).done();
             }
@@ -179,15 +172,15 @@ public class MyBatisProcessor {
 
     @Record(ExecutionTime.RUNTIME_INIT)
     @BuildStep
-    void generateMapperBeans(MyBatisRecorder recorder,
-                             List<MyBatisMapperBuildItem> myBatisMapperBuildItems,
+    void generateMapperBeans(MyRecorder recorder,
+                             List<MapperMBI> mapperMBIS,
                              //List<MyBatisMappedTypeBuildItem> myBatisMappedTypesBuildItems,
                              //List<MyBatisMappedJdbcTypeBuildItem> myBatisMappedJdbcTypesBuildItems,
-                             List<SqlSessionFactoryBuildItem> sqlSessionFacItems,
+                             List<SqlSessionMBI> sqlSessionFacItems,
                              BuildProducer<SyntheticBeanBuildItem> syntheticBeanBuildItemBuildProducer) {
         var dataSourceToSessionManagers = sqlSessionFacItems.stream()
-                .collect(Collectors.toMap(SqlSessionFactoryBuildItem::getDataSourceName, SqlSessionFactoryBuildItem::getSqlSessionManager));
-        for (MyBatisMapperBuildItem i : myBatisMapperBuildItems) {
+                .collect(Collectors.toMap(SqlSessionMBI::getDataSourceName, SqlSessionMBI::getSqlSessionManager));
+        for (MapperMBI i : mapperMBIS) {
             var sqlSessionManager = dataSourceToSessionManagers.get(i.getDataSourceName());
             SyntheticBeanBuildItem.ExtendedBeanConfigurator configurator = SyntheticBeanBuildItem
                     .configure(i.getMapperName())
