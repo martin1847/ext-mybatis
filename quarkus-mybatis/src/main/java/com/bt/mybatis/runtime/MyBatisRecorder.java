@@ -23,7 +23,7 @@ public class MyBatisRecorder {
 
     public RuntimeValue<SqlSessionFactory> createSqlSessionFactory(ConfigurationFactory factory, List<String> mapperXml) throws IOException, URISyntaxException {
         Configuration cfg  = factory.createConfiguration();
-        LOG.info("--- Setup : " + cfg);
+        LOG.info("--- Setup : " + factory);
         for(var sqlMap : mapperXml) {
 
             try (InputStream inputStream = Resources.getResourceAsStream(sqlMap)) {
