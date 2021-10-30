@@ -3,12 +3,8 @@ package com.bt.mybatis.runtime;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import com.bt.mybatis.runtime.bridge.ConfigurationFactory;
 import io.quarkus.runtime.RuntimeValue;
@@ -22,21 +18,22 @@ import org.apache.ibatis.session.SqlSessionManager;
 import org.jboss.logging.Logger;
 
 @Recorder
-public class MyRecorder {
-    private static final Logger LOG = Logger.getLogger(MyRecorder.class);
+public class MyBatisRecorder {
+    private static final Logger LOG = Logger.getLogger(MyBatisRecorder.class);
 
     public RuntimeValue<SqlSessionFactory> createSqlSessionFactory(ConfigurationFactory factory, List<String> mapperXml) throws IOException, URISyntaxException {
         Configuration cfg  = factory.createConfiguration();
+        LOG.info("--- Setup : " + cfg);
         for(var sqlMap : mapperXml) {
 
             try (InputStream inputStream = Resources.getResourceAsStream(sqlMap)) {
                 XMLMapperBuilder mapperParser = new XMLMapperBuilder(inputStream, cfg, sqlMap, cfg.getSqlFragments());
 
-                LOG.info(" RUNTIME MyRecorder :::: 125 ::: add Sql Map ::: "+sqlMap);
+                LOG.info("--- Add SQL XML ::: "+sqlMap);
                 mapperParser.parse();
 
             } catch (IOException e) {
-                LOG.error("error add SQLMAP :"+sqlMap,e);
+                LOG.error("--- error add SQLMAP :"+sqlMap,e);
                 e.printStackTrace();
             }
         }
@@ -54,11 +51,11 @@ public class MyRecorder {
         return () -> {
             try {
                 var mapper =  sqlSessionManager.getValue().getMapper(Resources.classForName(name));
-                LOG.info("MyBatisMapperSupplier Create Mapper ::" + name  +"  --> "+ mapper);
+                LOG.info("--- MyBatisMapperSupplier ::" + name  +"  --> "+ mapper);
                 return  mapper;
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
-                LOG.info("Create MapperError ::" + name ,e);
+                LOG.info("--- Create MapperError ::" + name ,e);
                 return null;
             }
         };

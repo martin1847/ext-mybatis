@@ -2,7 +2,6 @@ package com.bt.mybatis.deployment;
 
 import java.net.URL;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,8 +10,8 @@ import java.util.stream.Collectors;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import com.bt.mybatis.runtime.MyBatisRecorder;
 import com.bt.mybatis.runtime.MyConfig;
-import com.bt.mybatis.runtime.MyRecorder;
 import com.bt.mybatis.runtime.bridge.QuarkusDataSource;
 import com.bt.mybatis.runtime.bridge.QuarkusDataSourceFactory;
 import com.bt.mybatis.runtime.bridge.XmlConfigurationFactory;
@@ -36,6 +35,7 @@ import org.apache.ibatis.annotations.SelectProvider;
 import org.apache.ibatis.annotations.UpdateProvider;
 import org.apache.ibatis.cache.decorators.LruCache;
 import org.apache.ibatis.cache.impl.PerpetualCache;
+import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.io.Resources;
 import org.apache.ibatis.javassist.util.proxy.ProxyFactory;
 import org.apache.ibatis.logging.log4j.Log4jImpl;
@@ -66,25 +66,30 @@ public class BtMybatisProcessor {
         runtimeInit.produce(new RuntimeInitializedClassBuildItem(Log4jImpl.class.getName()));
     }
 
-    //@BuildStep
-    //void reflectiveClasses(BuildProducer<ReflectiveClassBuildItem> reflectiveClass) {
-    //    reflectiveClass.produce(new ReflectiveClassBuildItem(false, false,
-    //            ProxyFactory.class,
-    //            XMLLanguageDriver.class,
-    //            RawLanguageDriver.class,
-    //            SelectProvider.class,
-    //            UpdateProvider.class,
-    //            InsertProvider.class,
-    //            DeleteProvider.class,
-    //            Result.class,
-    //            Results.class,
-    //            ResultType.class,
-    //            ResultMap.class,
-    //            EnumTypeHandler.class));
-    //
-    //    reflectiveClass.produce(new ReflectiveClassBuildItem(true, true,
-    //            PerpetualCache.class, LruCache.class));
-    //}
+    @BuildStep
+    void refProxyClasses(BuildProducer<ReflectiveClassBuildItem> reflectiveClass,
+                           BuildProducer<NativeImageProxyDefinitionBuildItem> proxyClass) {
+        //reflectiveClass.produce(new ReflectiveClassBuildItem(false, false,
+        //        ProxyFactory.class,
+        //        XMLLanguageDriver.class,
+        //        RawLanguageDriver.class,
+        //        SelectProvider.class,
+        //        UpdateProvider.class,
+        //        InsertProvider.class,
+        //        DeleteProvider.class,
+        //        Result.class,
+        //        Results.class,
+        //        ResultType.class,
+        //        ResultMap.class,
+        //        EnumTypeHandler.class));
+
+        reflectiveClass.produce(new ReflectiveClassBuildItem(true, false,Executor.class));
+
+        proxyClass.produce(new NativeImageProxyDefinitionBuildItem(Executor.class.getName()));
+
+        reflectiveClass.produce(new ReflectiveClassBuildItem(true, true,
+                PerpetualCache.class, LruCache.class));
+    }
 
 
     @BuildStep
@@ -98,12 +103,7 @@ public class BtMybatisProcessor {
         var files = config.configFiles.split(",");
         var defaultAlias =  new Configuration().getTypeAliasRegistry().getTypeAliases();
         for(var configFile : files){
-
-
-            //var cfgFac = new XmlConfigurationFactory(configFile);
             var cfg =  new XmlConfigurationFactory(configFile).createConfiguration();
-
-            // TODO sql Mapfiles static init
 
             String xmlFolder = cfg.getVariables().getProperty("SqlXmlFolder");
             if(xmlFolder.charAt(0)=='/'){
@@ -113,7 +113,7 @@ public class BtMybatisProcessor {
 
             URL resource =  Resources.getResourceURL(folder);
 
-            LOG.info("found config file : " + configFile +" -> "+ folder +", url : "+resource);
+            LOG.info("=== Found config file : " + configFile +" -> "+ folder +", url : "+resource);
 
             var sqlMaps =  Files.walk(Paths.get(resource.toURI()))
                     .filter(Files::isRegularFile)
@@ -134,14 +134,14 @@ public class BtMybatisProcessor {
                reflective.produce(new ReflectiveClassBuildItem(true, false, mapCls));
                proxy.produce(new NativeImageProxyDefinitionBuildItem(mapCls.getName()));
 
-               LOG.info(" add Mapper Class for Reflective and Proxy :::  "+mapCls.getName());
+               LOG.info("=== add Mapper Class for Reflective and Proxy :::  "+mapCls.getName());
                mappers.produce(new MapperMBI(DotName.createSimple(mapCls.getName()), dsName));
            }
 
            var alias = cfg.getTypeAliasRegistry().getTypeAliases();
            alias.forEach((k,clz)->{
                if(! defaultAlias.containsKey(k) && clz != QuarkusDataSourceFactory.class){
-                   LOG.info("  Found Customer Alias  Types For Reflective :::  "+clz.getName());
+                   LOG.info("===  Found Customer Alias  Types For Reflective :::  "+clz.getName());
                    reflective.produce(new ReflectiveClassBuildItem(true, true, clz));
                }
            });
@@ -154,7 +154,7 @@ public class BtMybatisProcessor {
     NativeImageResourceBuildItem nativeImageResourceBuildItem(List<ConfigurationMBI> configurationMBIS) {
         List<String> resources = new ArrayList<>();
         configurationMBIS.forEach(it->resources.addAll(it.getMapperXml()));
-        LOG.info("Reg nativeImageResource: "  + resources);
+        LOG.info("=== Reg NativeImageResource: "  + resources);
         return new NativeImageResourceBuildItem(resources);
     }
 
@@ -163,7 +163,7 @@ public class BtMybatisProcessor {
     void generateSqlSessionFactorys(List<ConfigurationMBI> configurationMBIS,
                                     BuildProducer<SqlSessionMBI> sqlSessionMBIBuildProducer,
                                     BuildProducer<SyntheticBeanBuildItem> syntheticBeanBuildItemBuildProducer,
-            MyRecorder recorder) throws  Exception {
+            MyBatisRecorder recorder) throws  Exception {
         for(var cbi : configurationMBIS) {
             var factoryRuntime  = recorder.createSqlSessionFactory(
                     new XmlConfigurationFactory(cbi.getMybatisConfigFile()),cbi.getMapperXml());
@@ -180,7 +180,7 @@ public class BtMybatisProcessor {
                 configurator.defaultBean();
                 configurator.addQualifier().annotation(Named.class).addValue("value", dataSourceName).done();
             }
-            LOG.info("STATIC_INIT CDI SqlSessionFactory :"+ sqlSessionMBI);
+            LOG.info("=== STATIC_INIT CDI SqlSessionFactory :"+ sqlSessionMBI);
             sqlSessionMBIBuildProducer.produce(sqlSessionMBI);
             syntheticBeanBuildItemBuildProducer.produce(configurator.done());
         }
@@ -212,7 +212,7 @@ public class BtMybatisProcessor {
 
     @Record(ExecutionTime.RUNTIME_INIT)
     @BuildStep
-    void generateMapperBeans(MyRecorder recorder,
+    void generateMapperBeans(MyBatisRecorder recorder,
                              List<MapperMBI> mapperMBIS,
                              //List<MyBatisMappedTypeBuildItem> myBatisMappedTypesBuildItems,
                              //List<MyBatisMappedJdbcTypeBuildItem> myBatisMappedJdbcTypesBuildItems,
@@ -229,7 +229,7 @@ public class BtMybatisProcessor {
                     .unremovable()
                     .supplier(recorder.MyBatisMapperSupplier(i.getMapperName().toString(),
                             sqlSessionManager));
-            LOG.info("RUNTIME_INIT CDI Mapper Bean : " + i.getMapperName());
+            LOG.info("=== RUNTIME_INIT CDI Mapper Bean : " + i.getMapperName());
             syntheticBeanBuildItemBuildProducer.produce(configurator.done());
         }
         //for (MyBatisMappedTypeBuildItem i : myBatisMappedTypesBuildItems) {

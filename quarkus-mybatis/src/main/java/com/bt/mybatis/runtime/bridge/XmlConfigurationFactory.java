@@ -43,4 +43,11 @@ public class XmlConfigurationFactory implements ConfigurationFactory {
     public void setMybatisConfigFile(String mybatisConfigFile) {
         this.mybatisConfigFile = mybatisConfigFile;
     }
+
+    @Override
+    public String toString() {
+        return "XmlConfigurationFactory{" +
+                "mybatisConfigFile='" + mybatisConfigFile + '\'' +
+                '}';
+    }
 }
