@@ -6,6 +6,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -24,29 +25,18 @@ import org.jboss.logging.Logger;
 public class MyRecorder {
     private static final Logger LOG = Logger.getLogger(MyRecorder.class);
 
-    public RuntimeValue<SqlSessionFactory> createSqlSessionFactory(ConfigurationFactory factory) throws IOException, URISyntaxException {
+    public RuntimeValue<SqlSessionFactory> createSqlSessionFactory(ConfigurationFactory factory, List<String> mapperXml) throws IOException, URISyntaxException {
         Configuration cfg  = factory.createConfiguration();
-
-        String xmlFolder = cfg.getVariables().getProperty("SqlXmlFolder");
-
-
-
-
-        URL resource =  Resources.getResourceURL(xmlFolder);
-
-        var sqlMaps =  Files.walk(Paths.get(resource.toURI()))
-                .filter(Files::isRegularFile)
-                .map(x -> xmlFolder +"/" + x.getName(x.getNameCount()-1))
-                .collect(Collectors.toList());
-
-        for(var sqlMap : sqlMaps) {
+        for(var sqlMap : mapperXml) {
 
             try (InputStream inputStream = Resources.getResourceAsStream(sqlMap)) {
                 XMLMapperBuilder mapperParser = new XMLMapperBuilder(inputStream, cfg, sqlMap, cfg.getSqlFragments());
+
+                LOG.info(" RUNTIME MyRecorder :::: 125 ::: add Sql Map ::: "+sqlMap);
                 mapperParser.parse();
 
-                System.out.println(" :::: 125 ::: add Sql Map :::  "+sqlMap);
             } catch (IOException e) {
+                LOG.error("error add SQLMAP :"+sqlMap,e);
                 e.printStackTrace();
             }
         }
@@ -63,14 +53,12 @@ public class MyRecorder {
     public Supplier<Object> MyBatisMapperSupplier(String name, RuntimeValue<SqlSessionManager> sqlSessionManager) {
         return () -> {
             try {
-                System.out.println("MyBatisRecorder getMapper ::" + name  );
-
                 var mapper =  sqlSessionManager.getValue().getMapper(Resources.classForName(name));
-                System.out.println("MyBatisRecorder getMapper ::" + name  +"  --> "+ mapper);
+                LOG.info("MyBatisMapperSupplier Create Mapper ::" + name  +"  --> "+ mapper);
                 return  mapper;
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
-                System.out.println("MyBatisRecorder getMapperError ::" + name );
+                LOG.info("Create MapperError ::" + name ,e);
                 return null;
             }
         };

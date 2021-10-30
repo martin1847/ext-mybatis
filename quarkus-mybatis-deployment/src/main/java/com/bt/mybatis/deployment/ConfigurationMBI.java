@@ -1,5 +1,7 @@
 package com.bt.mybatis.deployment;
 
+import java.util.List;
+
 import com.bt.mybatis.runtime.bridge.QuarkusDataSourceFactory;
 import io.quarkus.builder.item.MultiBuildItem;
 
@@ -13,23 +15,22 @@ public final class ConfigurationMBI extends MultiBuildItem  {
 
     private String dataSourceName;
 
-    //private  Configuration cfg;
+    private List<String> mapperXml;
+
 
     public ConfigurationMBI(){
 
     }
 
     public ConfigurationMBI(String mybatisConfigFile){
-        this(mybatisConfigFile,null);
+        this(mybatisConfigFile,null,null);
     }
 
-    public ConfigurationMBI(String mybatisConfigFile, String dataSourceName) {
+    public ConfigurationMBI(String mybatisConfigFile, String dataSourceName, List<String> mapperXml) {
 
         this.mybatisConfigFile = mybatisConfigFile;
         this.dataSourceName = dataSourceName;
-
-
-
+        this.mapperXml = mapperXml;
     }
     //
     //public Configuration buildTimeConfiguration() {
@@ -37,6 +38,13 @@ public final class ConfigurationMBI extends MultiBuildItem  {
     //}
 
 
+
+    public List<String> getMapperXml() {
+        return mapperXml;
+    }
+    public void setMapperXml(List<String> mapperXml) {
+        this.mapperXml = mapperXml;
+    }
 
 
     public boolean isDefaultDs(){

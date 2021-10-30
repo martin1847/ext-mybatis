@@ -1,5 +1,10 @@
 package com.bt.mybatis.deployment;
 
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -18,6 +23,7 @@ import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.NativeImageProxyDefinitionBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.NativeImageResourceBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedClassBuildItem;
 import org.apache.ibatis.annotations.DeleteProvider;
@@ -30,6 +36,7 @@ import org.apache.ibatis.annotations.SelectProvider;
 import org.apache.ibatis.annotations.UpdateProvider;
 import org.apache.ibatis.cache.decorators.LruCache;
 import org.apache.ibatis.cache.impl.PerpetualCache;
+import org.apache.ibatis.io.Resources;
 import org.apache.ibatis.javassist.util.proxy.ProxyFactory;
 import org.apache.ibatis.logging.log4j.Log4jImpl;
 import org.apache.ibatis.scripting.defaults.RawLanguageDriver;
@@ -59,42 +66,64 @@ public class BtMybatisProcessor {
         runtimeInit.produce(new RuntimeInitializedClassBuildItem(Log4jImpl.class.getName()));
     }
 
-    @BuildStep
-    void reflectiveClasses(BuildProducer<ReflectiveClassBuildItem> reflectiveClass) {
-        reflectiveClass.produce(new ReflectiveClassBuildItem(false, false,
-                ProxyFactory.class,
-                XMLLanguageDriver.class,
-                RawLanguageDriver.class,
-                SelectProvider.class,
-                UpdateProvider.class,
-                InsertProvider.class,
-                DeleteProvider.class,
-                Result.class,
-                Results.class,
-                ResultType.class,
-                ResultMap.class,
-                EnumTypeHandler.class));
-
-        reflectiveClass.produce(new ReflectiveClassBuildItem(true, true,
-                PerpetualCache.class, LruCache.class));
-    }
+    //@BuildStep
+    //void reflectiveClasses(BuildProducer<ReflectiveClassBuildItem> reflectiveClass) {
+    //    reflectiveClass.produce(new ReflectiveClassBuildItem(false, false,
+    //            ProxyFactory.class,
+    //            XMLLanguageDriver.class,
+    //            RawLanguageDriver.class,
+    //            SelectProvider.class,
+    //            UpdateProvider.class,
+    //            InsertProvider.class,
+    //            DeleteProvider.class,
+    //            Result.class,
+    //            Results.class,
+    //            ResultType.class,
+    //            ResultMap.class,
+    //            EnumTypeHandler.class));
+    //
+    //    reflectiveClass.produce(new ReflectiveClassBuildItem(true, true,
+    //            PerpetualCache.class, LruCache.class));
+    //}
 
 
     @BuildStep
     void addConfigurations(MyConfig config,
                            BuildProducer<ConfigurationMBI> configurations,
                            BuildProducer<MapperMBI> mappers,
+                           BuildProducer<NativeImageResourceBuildItem> nativeResources,
                            BuildProducer<ReflectiveClassBuildItem> reflective,
                            BuildProducer<NativeImageProxyDefinitionBuildItem> proxy) throws Exception{
 
         var files = config.configFiles.split(",");
         var defaultAlias =  new Configuration().getTypeAliasRegistry().getTypeAliases();
         for(var configFile : files){
-            LOG.info("found config file : " + configFile);
 
-            var cfg = new XmlConfigurationFactory(configFile).createConfiguration();
+
+            //var cfgFac = new XmlConfigurationFactory(configFile);
+            var cfg =  new XmlConfigurationFactory(configFile).createConfiguration();
 
             // TODO sql Mapfiles static init
+
+            String xmlFolder = cfg.getVariables().getProperty("SqlXmlFolder");
+            if(xmlFolder.charAt(0)=='/'){
+                xmlFolder = xmlFolder.substring(1);
+            }
+            var folder = xmlFolder;
+
+            URL resource =  Resources.getResourceURL(folder);
+
+            LOG.info("found config file : " + configFile +" -> "+ folder +", url : "+resource);
+
+            var sqlMaps =  Files.walk(Paths.get(resource.toURI()))
+                    .filter(Files::isRegularFile)
+                    .map(x ->   folder +"/" + x.getName(x.getNameCount()-1))
+                    .filter(it->it.endsWith(".xml"))
+                    .collect(Collectors.toList());
+
+
+
+            //new NativeImageResourceBuildItem("META-INF/extra.properties");
 
 
             var ds =  (QuarkusDataSource)cfg.getEnvironment().getDataSource();
@@ -105,44 +134,42 @@ public class BtMybatisProcessor {
                reflective.produce(new ReflectiveClassBuildItem(true, false, mapCls));
                proxy.produce(new NativeImageProxyDefinitionBuildItem(mapCls.getName()));
 
-               System.out.println(" :::: 135 ::: add Mapper Class for Reflective and Proxy :::  "+mapCls.getName());
+               LOG.info(" add Mapper Class for Reflective and Proxy :::  "+mapCls.getName());
                mappers.produce(new MapperMBI(DotName.createSimple(mapCls.getName()), dsName));
            }
 
            var alias = cfg.getTypeAliasRegistry().getTypeAliases();
            alias.forEach((k,clz)->{
                if(! defaultAlias.containsKey(k) && clz != QuarkusDataSourceFactory.class){
-                   System.out.println(" :::: 140 ::: Found Customer Alias  Types For Reflective :::  "+clz.getName());
+                   LOG.info("  Found Customer Alias  Types For Reflective :::  "+clz.getName());
                    reflective.produce(new ReflectiveClassBuildItem(true, true, clz));
                }
            });
 
-            configurations.produce(new ConfigurationMBI(configFile,dsName));
+            configurations.produce(new ConfigurationMBI(configFile,dsName,sqlMaps));
         }
+    }
+
+    @BuildStep
+    NativeImageResourceBuildItem nativeImageResourceBuildItem(List<ConfigurationMBI> configurationMBIS) {
+        List<String> resources = new ArrayList<>();
+        configurationMBIS.forEach(it->resources.addAll(it.getMapperXml()));
+        LOG.info("Reg nativeImageResource: "  + resources);
+        return new NativeImageResourceBuildItem(resources);
     }
 
     @Record(ExecutionTime.STATIC_INIT)
     @BuildStep
     void generateSqlSessionFactorys(List<ConfigurationMBI> configurationMBIS,
-            BuildProducer<SqlSessionMBI> sqlSessionFactory,
+                                    BuildProducer<SqlSessionMBI> sqlSessionMBIBuildProducer,
+                                    BuildProducer<SyntheticBeanBuildItem> syntheticBeanBuildItemBuildProducer,
             MyRecorder recorder) throws  Exception {
         for(var cbi : configurationMBIS) {
             var factoryRuntime  = recorder.createSqlSessionFactory(
-                    new XmlConfigurationFactory(cbi.getMybatisConfigFile()));
-            sqlSessionFactory.produce(
-                    new SqlSessionMBI(factoryRuntime
+                    new XmlConfigurationFactory(cbi.getMybatisConfigFile()),cbi.getMapperXml());
+            var sqlSessionMBI  = new SqlSessionMBI(factoryRuntime
                             , recorder.createSqlSessionManager(factoryRuntime)
-                            , cbi.getDataSourceName(), cbi.isDefaultDs()));
-        }
-    }
-
-
-    @Record(ExecutionTime.STATIC_INIT)
-    @BuildStep
-    void register(List<SqlSessionMBI> sqlSessionMBIS,
-                  BuildProducer<SyntheticBeanBuildItem> syntheticBeanBuildItemBuildProducer,
-                  MyRecorder recorder) {
-        sqlSessionMBIS.forEach(sqlSessionMBI -> {
+                            , cbi.getDataSourceName(), cbi.isDefaultDs());
             SyntheticBeanBuildItem.ExtendedBeanConfigurator configurator = SyntheticBeanBuildItem
                     .configure(SqlSessionFactory.class)
                     .scope(Singleton.class)
@@ -153,9 +180,22 @@ public class BtMybatisProcessor {
                 configurator.defaultBean();
                 configurator.addQualifier().annotation(Named.class).addValue("value", dataSourceName).done();
             }
+            LOG.info("STATIC_INIT CDI SqlSessionFactory :"+ sqlSessionMBI);
+            sqlSessionMBIBuildProducer.produce(sqlSessionMBI);
             syntheticBeanBuildItemBuildProducer.produce(configurator.done());
-        });
+        }
     }
+
+    //
+    //@Record(ExecutionTime.STATIC_INIT)
+    //@BuildStep
+    //void register(List<SqlSessionMBI> sqlSessionMBIS,
+    //              BuildProducer<SyntheticBeanBuildItem> syntheticBeanBuildItemBuildProducer,
+    //              MyRecorder recorder) {
+    //    sqlSessionMBIS.forEach(sqlSessionMBI -> {
+    //
+    //    });
+    //}
 
 
     //@Record(ExecutionTime.STATIC_INIT)
@@ -189,7 +229,7 @@ public class BtMybatisProcessor {
                     .unremovable()
                     .supplier(recorder.MyBatisMapperSupplier(i.getMapperName().toString(),
                             sqlSessionManager));
-            System.out.println("219 CDI Mapper : " + i.getMapperName());
+            LOG.info("RUNTIME_INIT CDI Mapper Bean : " + i.getMapperName());
             syntheticBeanBuildItemBuildProducer.produce(configurator.done());
         }
         //for (MyBatisMappedTypeBuildItem i : myBatisMappedTypesBuildItems) {

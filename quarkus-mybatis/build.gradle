@@ -14,6 +14,6 @@ dependencies {
     api "io.quarkus:quarkus-agroal"
     api project(':bt-mybatis')
 
-//    implementation 'org.graalvm.nativeimage:svm'
+    api 'org.graalvm.nativeimage:svm'
     annotationProcessor("io.quarkus:quarkus-extension-processor:${quarkusPlatformVersion}")
 }
