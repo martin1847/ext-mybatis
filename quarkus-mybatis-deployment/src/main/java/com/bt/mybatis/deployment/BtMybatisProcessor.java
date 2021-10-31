@@ -174,7 +174,7 @@ public class BtMybatisProcessor {
                     .configure(SqlSessionFactory.class)
                     .scope(Singleton.class)
                     .unremovable()
-                    .supplier(recorder.MyBatisSqlSessionFactorySupplier(sqlSessionMBI.getSqlSessionFactory()));
+                    .supplier(sqlSessionMBI.getSqlSessionFactory()::getValue);
             String dataSourceName = sqlSessionMBI.getDataSourceName();
             if (!sqlSessionMBI.isDefaultDataSource()) {
                 configurator.defaultBean();

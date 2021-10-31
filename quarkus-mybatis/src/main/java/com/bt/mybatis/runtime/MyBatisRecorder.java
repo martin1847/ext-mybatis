@@ -23,17 +23,17 @@ public class MyBatisRecorder {
 
     public RuntimeValue<SqlSessionFactory> createSqlSessionFactory(ConfigurationFactory factory, List<String> mapperXml) throws IOException, URISyntaxException {
         Configuration cfg  = factory.createConfiguration();
-        LOG.info("--- Setup : " + factory);
+        LOG.info("Setup :: " + factory);
         for(var sqlMap : mapperXml) {
 
             try (InputStream inputStream = Resources.getResourceAsStream(sqlMap)) {
                 XMLMapperBuilder mapperParser = new XMLMapperBuilder(inputStream, cfg, sqlMap, cfg.getSqlFragments());
 
-                LOG.info("--- Add SQL XML ::: "+sqlMap);
+                LOG.info("Add SQL XML :: "+sqlMap);
                 mapperParser.parse();
 
             } catch (IOException e) {
-                LOG.error("--- error add SQLMAP :"+sqlMap,e);
+                LOG.error("Error add SQLMAP :: "+sqlMap,e);
                 e.printStackTrace();
             }
         }
@@ -51,42 +51,43 @@ public class MyBatisRecorder {
         return () -> {
             try {
                 var mapper =  sqlSessionManager.getValue().getMapper(Resources.classForName(name));
-                LOG.info("--- MyBatisMapperSupplier ::" + name  +"  --> "+ mapper);
+                LOG.info("MyBatisMapperSupplier :: " + name  +" -> "+ mapper);
                 return  mapper;
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
-                LOG.info("--- Create MapperError ::" + name ,e);
+                LOG.info("Create MapperError :: " + name ,e);
                 return null;
             }
         };
-    }
-
-    public Supplier<Object> MyBatisMappedTypeSupplier(String name, RuntimeValue<SqlSessionManager> sqlSessionManager) {
-        return () -> {
-            try {
-                return sqlSessionManager.getValue().getConfiguration().getTypeHandlerRegistry()
-                        .getTypeHandler(Resources.classForName(name));
-            } catch (ClassNotFoundException e) {
-                return null;
-            }
-        };
-    }
-
-    public Supplier<Object> MyBatisMappedJdbcTypeSupplier(String name, RuntimeValue<SqlSessionManager> sqlSessionManager) {
-        return () -> {
-            try {
-                return sqlSessionManager.getValue().getConfiguration().getTypeHandlerRegistry()
-                        .getTypeHandler(Resources.classForName(name));
-            } catch (ClassNotFoundException e) {
-                return null;
-            }
-        };
-    }
-
-    public Supplier<Object> MyBatisSqlSessionFactorySupplier(RuntimeValue<SqlSessionFactory> sqlSessionFactory) {
-        return sqlSessionFactory::getValue;
     }
 }
+    //
+    //public Supplier<Object> MyBatisMappedTypeSupplier(String name, RuntimeValue<SqlSessionManager> sqlSessionManager) {
+    //    return () -> {
+    //        try {
+    //            return sqlSessionManager.getValue().getConfiguration().getTypeHandlerRegistry()
+    //                    .getTypeHandler(Resources.classForName(name));
+    //        } catch (ClassNotFoundException e) {
+    //            return null;
+    //        }
+    //    };
+    //}
+    //
+    //public Supplier<Object> MyBatisMappedJdbcTypeSupplier(String name, RuntimeValue<SqlSessionManager> sqlSessionManager) {
+    //    return () -> {
+    //        try {
+    //            return sqlSessionManager.getValue().getConfiguration().getTypeHandlerRegistry()
+    //                    .getTypeHandler(Resources.classForName(name));
+    //        } catch (ClassNotFoundException e) {
+    //            return null;
+    //        }
+    //    };
+    //}
+
+    //public Supplier<Object> MyBatisSqlSessionFactorySupplier(RuntimeValue<SqlSessionFactory> sqlSessionFactory) {
+    //    return sqlSessionFactory::getValue;
+    //}
+
     //public RuntimeValue<Configuration> createConfiguration() {
     //    return new RuntimeValue<>(new Configuration());
     //}
