@@ -29,7 +29,8 @@ public class XmlConfigurationFactory implements ConfigurationFactory {
             reader = Resources.getResourceAsReader(mybatisConfigFile);
 
             XMLConfigBuilder builder = new XMLConfigBuilder(reader);
-            builder.getConfiguration().getTypeAliasRegistry().registerAlias("QUARKUS", QuarkusDataSourceFactory.class);
+            //just use the type full name
+            //builder.getConfiguration().getTypeAliasRegistry().registerAlias("QUARKUS", QuarkusDataSourceFactory.class);
             return builder.parse();
         } catch (IOException e) {
             throw new RuntimeException(e);
