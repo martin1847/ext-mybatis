@@ -1,3 +1,4 @@
+
 apply plugin: 'maven-publish'
 
 java {
@@ -5,14 +6,32 @@ java {
     withSourcesJar()
 }
 
+//groovy.util.Node node
+void mavenDep(Configuration depCfg,groovy.util.Node node,String scope){
+    depCfg.allDependencies.each{dependency ->
+        node.appendNode("dependency").with {
+            it.appendNode("groupId", dependency.group)
+            it.appendNode("artifactId", dependency.name)
+            it.appendNode("version", dependency.version)
+            it.appendNode("scope", scope)
+        }
+    }
+
+}
+
 publishing {
     publications {
         library(MavenPublication) {
             from components.java
         }
-//        mavenJava(MavenPublication) {
-//            groupId = 'com.bt'
-//        }
+        mavenJava(MavenPublication) {
+            // providedCompile -> provided scope
+            pom.withXml  {
+                var depNode = asNode().appendNode('dependencies')
+                mavenDep(configurations.api,depNode,"compile")
+                mavenDep(configurations.compileOnly,depNode,"provided")
+            }
+        }
     }
 
     repositories{
