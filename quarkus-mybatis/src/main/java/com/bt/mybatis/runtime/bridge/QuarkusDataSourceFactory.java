@@ -11,7 +11,7 @@ import org.jboss.logging.Logger;
 public class QuarkusDataSourceFactory implements DataSourceFactory {
 
     public static final String DEFAULT_DS_NAME = "<default>";
-    private static final    Logger LOG             = Logger.getLogger(MyBatisRecorder.class);
+    private static final    Logger LOG             = Logger.getLogger(QuarkusDataSourceFactory.class);
 
 
     private QuarkusDataSource dataSource;
