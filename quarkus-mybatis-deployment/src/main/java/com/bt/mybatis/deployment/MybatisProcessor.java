@@ -25,31 +25,19 @@ import io.quarkus.deployment.builditem.nativeimage.NativeImageProxyDefinitionBui
 import io.quarkus.deployment.builditem.nativeimage.NativeImageResourceBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedClassBuildItem;
-import org.apache.ibatis.annotations.DeleteProvider;
-import org.apache.ibatis.annotations.InsertProvider;
-import org.apache.ibatis.annotations.Result;
-import org.apache.ibatis.annotations.ResultMap;
-import org.apache.ibatis.annotations.ResultType;
-import org.apache.ibatis.annotations.Results;
-import org.apache.ibatis.annotations.SelectProvider;
-import org.apache.ibatis.annotations.UpdateProvider;
 import org.apache.ibatis.cache.decorators.LruCache;
 import org.apache.ibatis.cache.impl.PerpetualCache;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.io.Resources;
-import org.apache.ibatis.javassist.util.proxy.ProxyFactory;
 import org.apache.ibatis.logging.log4j.Log4jImpl;
-import org.apache.ibatis.scripting.defaults.RawLanguageDriver;
-import org.apache.ibatis.scripting.xmltags.XMLLanguageDriver;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.SqlSessionFactory;
-import org.apache.ibatis.type.EnumTypeHandler;
 import org.jboss.jandex.DotName;
 import org.jboss.logging.Logger;
 
-public class BtMybatisProcessor {
+public class MybatisProcessor {
 
-    private static final Logger LOG = Logger.getLogger(BtMybatisProcessor.class);
+    private static final Logger LOG = Logger.getLogger(MybatisProcessor.class);
     private static final String FEATURE = "bt-mybatis";
     //private static final DotName MYBATIS_MAPPER = DotName.createSimple(Mapper.class.getName());
     //private static final DotName MYBATIS_TYPE_HANDLER = DotName.createSimple(MappedTypes.class.getName());
@@ -174,7 +162,10 @@ public class BtMybatisProcessor {
                     .configure(SqlSessionFactory.class)
                     .scope(Singleton.class)
                     .unremovable()
-                    .supplier(sqlSessionMBI.getSqlSessionFactory()::getValue);
+                    .supplier(recorder.MyBatisSqlSessionFactorySupplier(sqlSessionMBI.getSqlSessionFactory()));
+            // Unable to serialize objects of type class com.bt.mybatis.deployment.BtMybatisProcessor$$Lambda$1906/0x0000000801b1a200 to
+            // bytecode as it has no default constructor
+                    //.supplier(sqlSessionMBI.getSqlSessionFactory()::getValue);
             String dataSourceName = sqlSessionMBI.getDataSourceName();
             if (!sqlSessionMBI.isDefaultDataSource()) {
                 configurator.defaultBean();

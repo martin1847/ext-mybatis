@@ -60,6 +60,10 @@ public class MyBatisRecorder {
             }
         };
     }
+
+    public Supplier<Object> MyBatisSqlSessionFactorySupplier(RuntimeValue<SqlSessionFactory> sqlSessionFactory) {
+        return sqlSessionFactory::getValue;
+    }
 }
     //
     //public Supplier<Object> MyBatisMappedTypeSupplier(String name, RuntimeValue<SqlSessionManager> sqlSessionManager) {
