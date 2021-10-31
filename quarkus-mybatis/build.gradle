@@ -7,13 +7,24 @@ quarkusExtension {
     deploymentModule = 'deployment'
 }
 
-dependencies {
-    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
+//configurations {
+//    providedCompile
+//}
+//
+//sourceSets {
+//    main { compileClasspath += configurations.providedCompile }
+//}
 
-    api "io.quarkus:quarkus-arc"
-    api "io.quarkus:quarkus-agroal"
+dependencies {
+//    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
+
+    api "io.quarkus:quarkus-arc:${quarkusPlatformVersion}"
+    api "io.quarkus:quarkus-agroal:${quarkusPlatformVersion}"
     api project(':bt-mybatis')
 
-    api 'org.graalvm.nativeimage:svm'
+    // maven provided
+    compileOnly 'org.graalvm.nativeimage:svm:21.2.0'
+//    compileOnly 'org.graalvm.compiler:compiler:21.2.0'
+
     annotationProcessor("io.quarkus:quarkus-extension-processor:${quarkusPlatformVersion}")
 }
