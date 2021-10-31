@@ -101,7 +101,7 @@ public class MybatisProcessor {
 
             URL resource =  Resources.getResourceURL(folder);
 
-            LOG.info("=== Found config file : " + configFile +" -> "+ folder +", url : "+resource);
+            LOG.info("=== addConfigurations : " + configFile +" -> "+ folder +", url : "+resource);
 
             var sqlMaps =  Files.walk(Paths.get(resource.toURI()))
                     .filter(Files::isRegularFile)
@@ -122,14 +122,14 @@ public class MybatisProcessor {
                reflective.produce(new ReflectiveClassBuildItem(true, false, mapCls));
                proxy.produce(new NativeImageProxyDefinitionBuildItem(mapCls.getName()));
 
-               LOG.info("=== add Mapper Class for Reflective and Proxy :::  "+mapCls.getName());
+               LOG.info("=== Reflective & Proxy Mapper Class :: "+mapCls.getName());
                mappers.produce(new MapperMBI(DotName.createSimple(mapCls.getName()), dsName));
            }
 
            var alias = cfg.getTypeAliasRegistry().getTypeAliases();
            alias.forEach((k,clz)->{
                if(! defaultAlias.containsKey(k) && clz != QuarkusDataSourceFactory.class){
-                   LOG.info("===  Found Customer Alias  Types For Reflective :::  "+clz.getName());
+                   LOG.info("=== Reflective Alias Class :: " +k+"->"+clz.getName());
                    reflective.produce(new ReflectiveClassBuildItem(true, true, clz));
                }
            });
