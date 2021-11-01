@@ -1,5 +1,0 @@
-version = '1.0.0'
-dependencies {
-    api 'org.mybatis:mybatis:3.5.7'
-    api project(':common-model')
-}

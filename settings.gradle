@@ -19,4 +19,4 @@ pluginManagement {
 }
 
 
-include 'common-model','bt-mybatis','quarkus-mybatis','quarkus-mybatis-deployment'
+include 'common-model','mybatis','ext-mybatis','ext-mybatis-deployment'
