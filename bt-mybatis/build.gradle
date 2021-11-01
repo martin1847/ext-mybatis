@@ -1,5 +1,5 @@
-
+version = '1.0.0'
 dependencies {
     api 'org.mybatis:mybatis:3.5.7'
-    implementation 'com.bt.rpc:rpc-api:1.0.0'
+    api project(':common-model')
 }
