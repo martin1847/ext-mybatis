@@ -34,7 +34,7 @@ subprojects {
 
     apply from: "$rootProject.projectDir/gradle/upload.gradle"
     
-    group = "com.bt"
+    group = "com.bt.ext"
     version = '1.0.0'
 
 

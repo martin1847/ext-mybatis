@@ -35,7 +35,7 @@ public abstract class CountSqlSource implements SqlSource {
         //
         //        origin instanceof DynamicContext
         MappedStatement.Builder builder = new MappedStatement.Builder(ms.getConfiguration(),
-                ms.getId() + "_AUTO_COUNT_", newStaticSql, ms.getSqlCommandType());
+                ms.getId() + "-ExtCount", newStaticSql, ms.getSqlCommandType());
         builder.resource(ms.getResource());
         builder.fetchSize(ms.getFetchSize());
         builder.statementType(ms.getStatementType());

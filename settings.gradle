@@ -19,4 +19,4 @@ pluginManagement {
 }
 
 
-include 'common-model','mybatis','ext-mybatis','ext-mybatis-deployment'
+include 'model','mybatis','ext-mybatis','ext-mybatis-deployment'
