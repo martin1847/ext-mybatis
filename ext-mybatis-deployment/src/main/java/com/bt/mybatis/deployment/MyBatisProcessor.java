@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
@@ -19,6 +20,7 @@ import com.bt.mybatis.runtime.MyConfig;
 import com.bt.mybatis.runtime.bridge.QuarkusDataSource;
 import com.bt.mybatis.runtime.bridge.XmlConfigurationFactory;
 import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
+import io.quarkus.arc.processor.ScopeInfo;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
@@ -198,7 +200,7 @@ public class MyBatisProcessor {
                             , cbi.getDataSourceName(), cbi.isDefaultDs());
             SyntheticBeanBuildItem.ExtendedBeanConfigurator configurator = SyntheticBeanBuildItem
                     .configure(SqlSessionFactory.class)
-                    .scope(Singleton.class)
+                    .scope(ApplicationScoped.class)//.scope(Singleton.class)
                     .unremovable()
                     .supplier(recorder.MyBatisSqlSessionFactorySupplier(sqlSessionMBI.getSqlSessionFactory()));
             // Unable to serialize objects of type class com.bt.mybatis.deployment.BtMybatisProcessor$$Lambda$1906/0x0000000801b1a200 to
@@ -230,7 +232,7 @@ public class MyBatisProcessor {
             var sqlSessionManager = dataSourceToSessionManagers.get(i.getDataSourceName());
             SyntheticBeanBuildItem.ExtendedBeanConfigurator configurator = SyntheticBeanBuildItem
                     .configure(i.getMapperName())
-                    .scope(Singleton.class)
+                    .scope(ApplicationScoped.class)//.scope(Singleton.class)
                     .setRuntimeInit()
                     .unremovable()
                     .supplier(recorder.MyBatisMapperSupplier(i.getMapperName().toString(),
