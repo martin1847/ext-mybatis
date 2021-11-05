@@ -6,6 +6,8 @@ package com.bt.model;
 
 import java.io.Serializable;
 
+import javax.validation.Valid;
+import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
@@ -23,9 +25,11 @@ public class PagedQuery<Query> implements Serializable {
 
     Integer page;
 
-    @NotNull@Min(1)
+    @NotNull@Min(1)@Max(100)
     Integer pageSize;
 
+    //@NotNull
+    @Valid
     Query q;
 
     public PagedQuery(){
