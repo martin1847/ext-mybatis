@@ -37,6 +37,7 @@ import org.apache.ibatis.scripting.defaults.RawSqlSource;
 import org.apache.ibatis.scripting.xmltags.DynamicSqlSource;
 import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.session.SqlSessionFactory;
+import org.apache.ibatis.type.BaseTypeHandler;
 import org.jboss.jandex.DotName;
 import org.jboss.logging.Logger;
 
@@ -81,6 +82,10 @@ public class MyBatisProcessor {
         var files = config.configFiles.split(",");
         //var defaultAlias =  new Configuration().getTypeAliasRegistry().getTypeAliases();
         var clsSet = new HashSet<Class>();
+
+
+        var handlerSet  = new HashSet<Class>();
+
         for (var configFile : files) {
             var cfg = new XmlConfigurationFactory(configFile).createConfiguration();
 
@@ -106,6 +111,19 @@ public class MyBatisProcessor {
 
             var poSets = new HashSet<Class>();
 
+            //cfg.getTypeHandlerRegistry().getTypeHandlers().forEach(
+            //        System.out::println
+            //);
+
+
+            cfg.getTypeAliasRegistry().getTypeAliases().forEach((k,v)->{
+                if(v.getName().startsWith("com.") && BaseTypeHandler.class.isAssignableFrom(v)){
+                    handlerSet.add(v);
+                }
+            });
+
+
+
             for (var mapCls : cfg.getMapperRegistry().getMappers()) {
 
                 if (!clsSet.add(mapCls)) {
@@ -126,13 +144,19 @@ public class MyBatisProcessor {
                     }
                 }
                 var poList = addSqlParamReflectiveClass(clsSet, reflective, poSets);
-                LOG.info("=== Reflective & Proxy Mapper Class :: " + mapCls.getName()+","+poList);
+                LOG.info("=== Reflective & Proxy Mapper Class :: " + mapCls.getName()+poList);
 
             }
 
 
             configurations.produce(new ConfigurationMBI(configFile, dsName, sqlMaps));
         }
+
+        if (handlerSet.size() > 0) {
+            LOG.info("=== Reflective CustomerHandlers" + handlerSet);
+            reflective.produce(new ReflectiveClassBuildItem(true, false, handlerSet.toArray(new Class[] {})));
+        }
+
     }
 
     static void recursionParameterizedType(Set<Class> total, Type t) {
