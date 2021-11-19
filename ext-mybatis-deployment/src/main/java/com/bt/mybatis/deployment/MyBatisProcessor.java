@@ -116,7 +116,7 @@ public class MyBatisProcessor {
                 reflective.produce(new ReflectiveClassBuildItem(true, false, mapCls));
                 proxy.produce(new NativeImageProxyDefinitionBuildItem(mapCls.getName()));
 
-                LOG.info("=== Reflective & Proxy Mapper Class :: " + mapCls.getName());
+
                 mappers.produce(new MapperMBI(DotName.createSimple(mapCls.getName()), dsName));
                 for (var m : mapCls.getDeclaredMethods()) {
 
@@ -125,7 +125,9 @@ public class MyBatisProcessor {
                         recursionParameterizedType(poSets, param);
                     }
                 }
-                addSqlParamReflectiveClass(clsSet, reflective, poSets);
+                var poList = addSqlParamReflectiveClass(clsSet, reflective, poSets);
+                LOG.info("=== Reflective & Proxy Mapper Class :: " + mapCls.getName()+","+poList);
+
             }
 
 
@@ -145,7 +147,8 @@ public class MyBatisProcessor {
         }
     }
 
-    private static void addSqlParamReflectiveClass(Set<Class> set, BuildProducer<ReflectiveClassBuildItem> reflective, Set<Class> poSet) {
+    private static List<String> addSqlParamReflectiveClass(Set<Class> set, BuildProducer<ReflectiveClassBuildItem> reflective, Set<Class> poSet) {
+        var list = new ArrayList<String>();
         for (var c : poSet) {
             if (set.add(c)
                     && !c.isPrimitive()
@@ -159,10 +162,11 @@ public class MyBatisProcessor {
                     && !Map.class.isAssignableFrom(c)
                     && !RowBounds.class.isAssignableFrom(c)
             ) {
-                LOG.info("====== Reflective From Mapper  :: " + c);
+                list.add(c.getName());
                 reflective.produce(new ReflectiveClassBuildItem(true, false, c));
             }
         }
+        return list;
     }
 
     @BuildStep
@@ -211,6 +215,8 @@ public class MyBatisProcessor {
                              BuildProducer<SyntheticBeanBuildItem> syntheticBeanBuildItemBuildProducer) {
         var dataSourceToSessionManagers = sqlSessionFacItems.stream()
                 .collect(Collectors.toMap(SqlSessionMBI::getDataSourceName, SqlSessionMBI::getSqlSessionManager));
+
+
         for (MapperMBI i : mapperMBIS) {
             var sqlSessionManager = dataSourceToSessionManagers.get(i.getDataSourceName());
             SyntheticBeanBuildItem.ExtendedBeanConfigurator configurator = SyntheticBeanBuildItem
@@ -220,10 +226,9 @@ public class MyBatisProcessor {
                     .unremovable()
                     .supplier(recorder.MyBatisMapperSupplier(i.getMapperName().toString(),
                             sqlSessionManager));
-            LOG.info("=== RUNTIME_INIT CDI Mapper Bean : " + i.getMapperName());
             syntheticBeanBuildItemBuildProducer.produce(configurator.done());
         }
-
+        LOG.info("=== RUNTIME_INIT CDI Mapper Bean : " + mapperMBIS);
     }
 
 }

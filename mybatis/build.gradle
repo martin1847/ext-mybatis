@@ -2,5 +2,7 @@ group = "com.bt.common"
 version = '1.0.0'
 dependencies {
     api 'org.mybatis:mybatis:3.5.7'
+
+    implementation "com.bt.rpc:rpc-common:1.0.0"
     api project(':model')
 }

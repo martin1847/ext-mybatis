@@ -20,4 +20,9 @@ public final class MapperMBI extends MultiBuildItem {
     public String getDataSourceName() {
         return dataSourceName;
     }
+
+    @Override
+    public String toString() {
+        return "{" +  mapperName + "->" + dataSourceName + '}';
+    }
 }
