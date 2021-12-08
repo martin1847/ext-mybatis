@@ -29,7 +29,7 @@ public class MyBatisRecorder {
             try (InputStream inputStream = Resources.getResourceAsStream(sqlMap)) {
                 XMLMapperBuilder mapperParser = new XMLMapperBuilder(inputStream, cfg, sqlMap, cfg.getSqlFragments());
 
-                LOG.info("Add SQL XML :: "+sqlMap);
+                LOG.debug("Add SQL XML :: "+sqlMap);
                 mapperParser.parse();
 
             } catch (IOException e) {
@@ -51,7 +51,7 @@ public class MyBatisRecorder {
         return () -> {
             try {
                 var mapper =  sqlSessionManager.getValue().getMapper(Resources.classForName(name));
-                LOG.info("MyBatisMapperSupplier :: " + name  +" -> "+ mapper);
+                LOG.info("Create MyBatisMapper :: " + name  +" -> "+ mapper);
                 return  mapper;
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();

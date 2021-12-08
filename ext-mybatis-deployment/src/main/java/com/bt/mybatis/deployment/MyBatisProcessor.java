@@ -123,6 +123,7 @@ public class MyBatisProcessor {
             });
 
 
+            var mapperListLog = new ArrayList<String>();
 
             for (var mapCls : cfg.getMapperRegistry().getMappers()) {
 
@@ -144,16 +145,19 @@ public class MyBatisProcessor {
                     }
                 }
                 var poList = addSqlParamReflectiveClass(clsSet, reflective, poSets);
-                LOG.info("=== Reflective & Proxy Mapper Class :: " + mapCls.getName()+poList);
-
+                mapperListLog.add(mapCls.getSimpleName()+"("+
+                        poList.stream().map(full->full.substring(full.lastIndexOf('.')+1))
+                                .collect(Collectors.joining(","))
+                        +")");
             }
-
+            LOG.info("=== [ "+mapperListLog.size()+" Mapper ] for "+configFile+" :: " + mapperListLog);
 
             configurations.produce(new ConfigurationMBI(configFile, dsName, sqlMaps));
         }
 
         if (handlerSet.size() > 0) {
-            LOG.info("=== Reflective CustomerHandlers" + handlerSet);
+            LOG.info("=== [ "+ handlerSet.size()+" CustomerHandler ] : " +
+                    handlerSet.stream().map(Class::getSimpleName).collect(Collectors.joining(",")));
             reflective.produce(new ReflectiveClassBuildItem(true, false, handlerSet.toArray(new Class[] {})));
         }
 
@@ -197,7 +201,7 @@ public class MyBatisProcessor {
     NativeImageResourceBuildItem nativeImageResourceBuildItem(List<ConfigurationMBI> configurationMBIS) {
         List<String> resources = new ArrayList<>();
         configurationMBIS.forEach(it -> resources.addAll(it.getMapperXml()));
-        LOG.info("=== Reg NativeImageResource: " + resources);
+        LOG.info("=== [ "+resources.size()+" NativeImageResource ] : " + resources);
         return new NativeImageResourceBuildItem(resources);
     }
 
@@ -223,7 +227,7 @@ public class MyBatisProcessor {
                 configurator.defaultBean();
                 configurator.addQualifier().annotation(Named.class).addValue("value", dataSourceName).done();
             }
-            LOG.info("=== STATIC_INIT CDI SqlSessionFactory :" + sqlSessionMBI);
+            LOG.debug("=== STATIC_INIT CDI SqlSessionFactory :" + sqlSessionMBI);
             sqlSessionMBIBuildProducer.produce(sqlSessionMBI);
             syntheticBeanBuildItemBuildProducer.produce(configurator.done());
         }
@@ -241,6 +245,7 @@ public class MyBatisProcessor {
                 .collect(Collectors.toMap(SqlSessionMBI::getDataSourceName, SqlSessionMBI::getSqlSessionManager));
 
 
+        var ds = "";
         for (MapperMBI i : mapperMBIS) {
             var sqlSessionManager = dataSourceToSessionManagers.get(i.getDataSourceName());
             SyntheticBeanBuildItem.ExtendedBeanConfigurator configurator = SyntheticBeanBuildItem
@@ -251,8 +256,10 @@ public class MyBatisProcessor {
                     .supplier(recorder.MyBatisMapperSupplier(i.getMapperName().toString(),
                             sqlSessionManager));
             syntheticBeanBuildItemBuildProducer.produce(configurator.done());
+            ds = i.getDataSourceName();
         }
-        LOG.info("=== RUNTIME_INIT CDI Mapper Bean : " + mapperMBIS);
+        LOG.info("=== [ "+mapperMBIS.size()+" CDI Mapper -> "+ ds +" ] : " + mapperMBIS.stream()
+                .map(mbi->mbi.getMapperName().withoutPackagePrefix()).collect(Collectors.joining(",")));
     }
 
 }
