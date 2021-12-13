@@ -201,7 +201,7 @@ public class MyBatisProcessor {
     NativeImageResourceBuildItem nativeImageResourceBuildItem(List<ConfigurationMBI> configurationMBIS) {
         List<String> resources = new ArrayList<>();
         configurationMBIS.forEach(it -> resources.addAll(it.getMapperXml()));
-        LOG.info("=== [ "+resources.size()+" NativeImageResource ] : " + resources);
+        LOG.debug("=== [ "+resources.size()+" NativeImageResource ] : " + resources);
         return new NativeImageResourceBuildItem(resources);
     }
 
@@ -258,7 +258,7 @@ public class MyBatisProcessor {
             syntheticBeanBuildItemBuildProducer.produce(configurator.done());
             ds = i.getDataSourceName();
         }
-        LOG.info("=== [ "+mapperMBIS.size()+" CDI Mapper -> "+ ds +" ] : " + mapperMBIS.stream()
+        LOG.debug("=== [ "+mapperMBIS.size()+" CDI Mapper -> "+ ds +" ] : " + mapperMBIS.stream()
                 .map(mbi->mbi.getMapperName().withoutPackagePrefix()).collect(Collectors.joining(",")));
     }
 
