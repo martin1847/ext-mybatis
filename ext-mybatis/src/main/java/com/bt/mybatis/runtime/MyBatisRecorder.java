@@ -51,7 +51,7 @@ public class MyBatisRecorder {
         return () -> {
             try {
                 var mapper =  sqlSessionManager.getValue().getMapper(Resources.classForName(name));
-                LOG.info("Create MyBatisMapper :: " + name  +" -> "+ mapper);
+                LOG.info("Create MyBatisMapperProxy: " + name );
                 return  mapper;
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
