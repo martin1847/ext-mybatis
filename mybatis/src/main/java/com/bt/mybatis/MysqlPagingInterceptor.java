@@ -36,7 +36,7 @@ public class MysqlPagingInterceptor extends AbstractPagingInterceptor {
         }
 
         if (sqlBuilder.indexOf(UNION) != -1) {
-            sqlBuilder.insert(0, "select count(*) from ( ").append(" ) ");
+            sqlBuilder.insert(0, "select count(*) from ( ").append(" ) tmpInnerUnionAlias ");
             return sqlBuilder.toString();
         }
 
