@@ -39,7 +39,8 @@ public interface  PagedQueryHelper<Query> extends ToMap<Query> {
     static  <Query,DTO> PagedList<DTO> pager(PagedQuery<Query> query, Map<String,Object> map,
                                              PagedSelect<DTO> call){
         int page = query.getPage() == null ? PagedQuery.DEFAULT_PAGE : query.getPage();
-        var bounds = DbBounds.fromPage(page, query.getPageSize());
+        int size = query.getPageSize() == null ? PagedQuery.DEFAULT_PAGE_SIZE : query.getPageSize();
+        var bounds = DbBounds.fromPage(page, size);
         var list = call.list(map, bounds);
         //HACK , this call rewrite count to bounds
         return new PagedList<>(bounds.getCount(), list);
