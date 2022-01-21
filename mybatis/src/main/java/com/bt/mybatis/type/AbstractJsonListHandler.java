@@ -26,7 +26,7 @@ public abstract class AbstractJsonListHandler<T> extends JsonTypeHandler<List<T>
 
     @Override
     protected String stringify(List<T> obj) {
-        if(obj == null){
+        if(obj == null || obj.isEmpty()){
             return null;
         }
         return JsonUtils.stringify(obj);
