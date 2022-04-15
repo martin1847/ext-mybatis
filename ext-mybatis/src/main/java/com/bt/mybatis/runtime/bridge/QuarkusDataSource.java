@@ -14,12 +14,16 @@ public class QuarkusDataSource implements DataSource {
     private String           dataSourceName;
     private AgroalDataSource dataSource;
 
+    public QuarkusDataSource() {
+        this(QuarkusDataSourceFactory.DEFAULT_DS_NAME);
+    }
+
     public QuarkusDataSource(String dataSourceName) {
         this.dataSourceName = dataSourceName;
         this.dataSource = null;
     }
 
-    private DataSource getDataSource() {
+    protected DataSource getDataSource() {
         if (dataSource == null) {
             dataSource = DataSources.fromName(dataSourceName);
         }
