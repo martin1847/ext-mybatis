@@ -1,0 +1,57 @@
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+
+<configuration>
+
+    <properties resource="config.properties">
+        <property name="SqlXmlFolder" value="/mapper"/>
+        <property name="org.apache.ibatis.parsing.PropertyParser.enable-default-value" value="true"/>
+    </properties>
+
+    <settings>
+        <setting name="lazyLoadingEnabled" value="true"/>
+        <setting name="useGeneratedKeys" value="true"/>
+        <setting name="defaultStatementTimeout" value="25"/>
+        <setting name="defaultFetchSize" value="100"/>
+        <setting name="mapUnderscoreToCamelCase" value="true"/>
+    </settings>
+
+    <typeAliases>
+        <!--        <typeAlias type="com.alipay.intl.comm.mybatis.type.Json2LongList" alias="Json2LongList"/>-->
+        <!--        <typeAlias type="com.alipay.imdopcore.mapper.config.Json2ShopExtInfo" alias="Json2ShopExtInfo"/>-->
+        <!--        <typeAlias type="com.alipay.imdopcore.mapper.config.Json2ShopBuildLog" alias="Json2ShopBuildLog"/>-->
+        <package name="test.mybatis.dto"/>
+<!--        <package name="com.btyx.test.typehandler"/>-->
+    </typeAliases>
+
+<!--    <typeHandlers>-->
+<!--        <package name="com.bt.typehandler"/>-->
+<!--    </typeHandlers>-->
+
+    <plugins>
+        <plugin interceptor="com.bt.mybatis.MysqlPagingInterceptor"/>
+    </plugins>
+
+
+    <environments default="development">
+        <environment id="development">
+            <transactionManager type="JDBC"/>
+            <dataSource type="POOLED">
+                <property name="driver" value="${driver}"/>
+                <property name="url" value="${url}"/>
+                <property name="username" value="${username}"/>
+                <property name="password" value="${password:example}"/>
+            </dataSource>
+        </environment>
+    </environments>
+
+<!--    show variables like 'lower_case_table_names'
+SqlXmlFolder
+-->
+    <mappers>
+        <mapper resource="mapper/ExampleMapper.xml"/>
+        <package name="com.btyx.test.mapper"/>
+    </mappers>
+
+</configuration>
