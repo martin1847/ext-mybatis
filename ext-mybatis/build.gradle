@@ -16,15 +16,15 @@ quarkusExtension {
 //}
 
 dependencies {
-//    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
+//    implementation platform("io.quarkus:quarkus-bom:${quarkusMiniSupport}")
 
-    api "io.quarkus:quarkus-arc:${quarkusPlatformVersion}"
-    api "io.quarkus:quarkus-agroal:${quarkusPlatformVersion}"
+    api "io.quarkus:quarkus-arc:${quarkusMiniSupport}"
+    api "io.quarkus:quarkus-agroal:${quarkusMiniSupport}"
     api project(':mybatis')
 
     // maven provided
     compileOnly 'org.graalvm.nativeimage:svm:21.3.0'
 //    compileOnly 'org.graalvm.compiler:compiler:21.2.0'
 
-    annotationProcessor("io.quarkus:quarkus-extension-processor:${quarkusPlatformVersion}")
+    annotationProcessor("io.quarkus:quarkus-extension-processor:${quarkusMiniSupport}")
 }

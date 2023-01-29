@@ -1,9 +1,9 @@
 dependencies {
-//    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
-    api "io.quarkus:quarkus-arc-deployment:${quarkusPlatformVersion}"
-    api "io.quarkus:quarkus-agroal-deployment:${quarkusPlatformVersion}"
+//    implementation platform("io.quarkus:quarkus-bom:${quarkusMiniSupport}")
+    api "io.quarkus:quarkus-arc-deployment:${quarkusMiniSupport}"
+    api "io.quarkus:quarkus-agroal-deployment:${quarkusMiniSupport}"
     api project(':ext-mybatis')
-    annotationProcessor("io.quarkus:quarkus-extension-processor:${quarkusPlatformVersion}")
+    annotationProcessor("io.quarkus:quarkus-extension-processor:${quarkusMiniSupport}")
 
 
 //    testImplementation('io.quarkus:quarkus-junit5-internal')

@@ -1,16 +1,26 @@
 group = "com.bt.common"
-version = '1.0.0'
+version = '1.0.1'
 dependencies {
-    api 'org.mybatis:mybatis:3.5.10'
+    api 'org.mybatis:mybatis:3.5.11'
 
     implementation "com.bt.rpc:rpc-common:1.0.0"
     api project(':model')
 
 
     // or one line testImplementation 'org.junit.jupiter:junit-jupiter:5.9.0'
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
 
     testImplementation 'mysql:mysql-connector-java:8.0.30'
     testImplementation 'org.slf4j:slf4j-simple:1.7.36'
+}
+
+compileJava{
+    options.compilerArgs += [
+            '--add-exports', 'jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED,ALL-UNNAMED',
+            '--add-exports', 'jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED,ALL-UNNAMED',
+            '--add-exports', 'jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED,ALL-UNNAMED',
+            '--add-exports', 'jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED,ALL-UNNAMED',
+            '--add-exports', 'jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED,ALL-UNNAMED'
+        ]
 }

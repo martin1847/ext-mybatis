@@ -2,4 +2,8 @@ group = "com.bt.common"
 version = '1.0.0'
 dependencies {
     api 'jakarta.validation:jakarta.validation-api:2.0.2'
+
+//    implementation project(':mybatis')
+//    annotationProcessor project(':mybatis')
+
 }
