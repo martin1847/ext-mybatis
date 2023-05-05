@@ -22,9 +22,9 @@ dependencies {
     api "io.quarkus:quarkus-agroal:${quarkusMiniSupport}"
     api project(':mybatis')
 
+
     // maven provided
-    compileOnly 'org.graalvm.nativeimage:svm:21.3.0'
-//    compileOnly 'org.graalvm.compiler:compiler:21.2.0'
+    compileOnly "org.graalvm.nativeimage:svm:$graalSdkVersion"
 
     annotationProcessor("io.quarkus:quarkus-extension-processor:${quarkusMiniSupport}")
 }

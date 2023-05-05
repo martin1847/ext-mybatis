@@ -4,13 +4,4 @@ dependencies {
     api "io.quarkus:quarkus-agroal-deployment:${quarkusMiniSupport}"
     api project(':ext-mybatis')
     annotationProcessor("io.quarkus:quarkus-extension-processor:${quarkusMiniSupport}")
-
-
-//    testImplementation('io.quarkus:quarkus-junit5-internal')
-//    testImplementation "org.jboss.slf4j:slf4j-jboss-logmanager"
-//    testImplementation('io.quarkus:quarkus-junit5'){
-//        exclude module: 'quarkus-bootstrap-maven-resolver'
-//    }
-//    testImplementation('io.quarkus:quarkus-test-h2')
-//    testImplementation('io.quarkus:quarkus-test-h2-deployment')
 }

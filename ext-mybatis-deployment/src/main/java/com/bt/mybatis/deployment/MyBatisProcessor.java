@@ -12,9 +12,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Named;
-
 import com.bt.mybatis.runtime.MyBatisRecorder;
 import com.bt.mybatis.runtime.MyConfig;
 import com.bt.mybatis.runtime.bridge.QuarkusDataSource;
@@ -29,6 +26,8 @@ import io.quarkus.deployment.builditem.nativeimage.NativeImageProxyDefinitionBui
 import io.quarkus.deployment.builditem.nativeimage.NativeImageResourceBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedClassBuildItem;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Named;
 import org.apache.ibatis.builder.StaticSqlSource;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.io.Resources;
@@ -61,12 +60,9 @@ public class MyBatisProcessor {
     void refProxyClasses(BuildProducer<ReflectiveClassBuildItem> reflectiveClass,
                          BuildProducer<NativeImageProxyDefinitionBuildItem> proxyClass) {
 
-        reflectiveClass.produce(new ReflectiveClassBuildItem(true, false, Executor.class));
-        reflectiveClass.produce(new ReflectiveClassBuildItem(false, true, RawSqlSource.class));
-        reflectiveClass.produce(new ReflectiveClassBuildItem(false, true, DynamicSqlSource.class));
-        reflectiveClass.produce(new ReflectiveClassBuildItem(false, true, StaticSqlSource.class));
-
-
+        reflectiveClass.produce(ReflectiveClassBuildItem.builder(Executor.class).methods().build());
+        var fieldIndo = ReflectiveClassBuildItem.builder(RawSqlSource.class,DynamicSqlSource.class,StaticSqlSource.class).fields().build();
+        reflectiveClass.produce(fieldIndo);
         proxyClass.produce(new NativeImageProxyDefinitionBuildItem(Executor.class.getName()));
 
     }
@@ -132,7 +128,7 @@ public class MyBatisProcessor {
                     continue;
                 }
 
-                reflective.produce(new ReflectiveClassBuildItem(true, false, mapCls));
+                reflective.produce(ReflectiveClassBuildItem.builder(mapCls).methods().build());
                 proxy.produce(new NativeImageProxyDefinitionBuildItem(mapCls.getName()));
 
 
@@ -158,7 +154,7 @@ public class MyBatisProcessor {
         if (handlerSet.size() > 0) {
             LOG.info("=== [ "+ handlerSet.size()+" CustomerHandler ] : " +
                     handlerSet.stream().map(Class::getSimpleName).collect(Collectors.joining(",")));
-            reflective.produce(new ReflectiveClassBuildItem(true, false, handlerSet.toArray(new Class[] {})));
+            reflective.produce(ReflectiveClassBuildItem.builder(handlerSet.toArray(new Class[] {})).methods().build());
         }
 
     }
@@ -191,7 +187,7 @@ public class MyBatisProcessor {
                     && !RowBounds.class.isAssignableFrom(c)
             ) {
                 list.add(c.getName());
-                reflective.produce(new ReflectiveClassBuildItem(true, false, c));
+                reflective.produce(ReflectiveClassBuildItem.builder(c).methods().build());
             }
         }
         return list;
