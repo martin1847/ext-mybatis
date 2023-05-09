@@ -197,7 +197,7 @@ public class MyBatisProcessor {
     NativeImageResourceBuildItem nativeImageResourceBuildItem(List<ConfigurationMBI> configurationMBIS) {
         List<String> resources = new ArrayList<>();
         configurationMBIS.forEach(it -> resources.addAll(it.getMapperXml()));
-        LOG.debug("=== [ "+resources.size()+" NativeImageResource ] : " + resources);
+        LOG.info("=== [ "+resources.size()+" NativeImageResource ] : " + resources);
         return new NativeImageResourceBuildItem(resources);
     }
 
@@ -223,7 +223,8 @@ public class MyBatisProcessor {
                 configurator.defaultBean();
                 configurator.addQualifier().annotation(Named.class).addValue("value", dataSourceName).done();
             }
-            LOG.debug("=== STATIC_INIT CDI SqlSessionFactory :" + sqlSessionMBI);
+
+            LOG.info("=== STATIC_INIT CDI SqlSessionFactory :" + sqlSessionMBI);
             sqlSessionMBIBuildProducer.produce(sqlSessionMBI);
             syntheticBeanBuildItemBuildProducer.produce(configurator.done());
         }

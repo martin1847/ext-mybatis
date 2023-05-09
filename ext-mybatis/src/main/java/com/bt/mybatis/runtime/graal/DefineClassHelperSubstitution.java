@@ -2,14 +2,13 @@ package com.bt.mybatis.runtime.graal;
 
 import java.lang.invoke.MethodHandles;
 
+import com.oracle.svm.core.annotate.Substitute;
+import com.oracle.svm.core.annotate.TargetClass;
+import com.oracle.svm.core.jdk.JDK11OrEarlier;
 import org.apache.ibatis.javassist.CannotCompileException;
 import org.apache.ibatis.javassist.util.proxy.DefineClassHelper;
 
-import com.oracle.svm.core.annotate.Substitute;
-import com.oracle.svm.core.annotate.TargetClass;
-import com.oracle.svm.core.jdk.JDK8OrEarlier;
-
-@TargetClass(value = DefineClassHelper.class, onlyWith = JDK8OrEarlier.class)
+@TargetClass(value = DefineClassHelper.class, onlyWith = JDK11OrEarlier.class)
 final public class DefineClassHelperSubstitution {
 
     @Substitute
