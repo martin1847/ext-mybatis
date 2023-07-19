@@ -5,14 +5,14 @@ dependencies {
 
     //JSON util
     implementation "com.bt.rpc:rpc-common:$rpcVersion"
-    api project(':model')
+//    api project(':model')
 
 
     // or one line testImplementation 'org.junit.jupiter:junit-jupiter:5.9.0'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.2'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
 
-    testImplementation 'mysql:mysql-connector-java:8.0.30'
+    testImplementation 'mysql:mysql-connector-java:8.0.33'
     testImplementation 'org.slf4j:slf4j-simple:1.7.36'
 }
 
