@@ -1,11 +1,17 @@
 package com.bt.mybatis.deployment;
 
+import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -84,22 +90,10 @@ public class MyBatisProcessor {
 
         for (var configFile : files) {
             var cfg = new XmlConfigurationFactory(configFile).createConfiguration();
-
             String xmlFolder = cfg.getVariables().getProperty("SqlXmlFolder");
-            if (xmlFolder.charAt(0) == '/') {
-                xmlFolder = xmlFolder.substring(1);
-            }
-            var folder = xmlFolder;
+            var sqlMaps = loadAllXmlFolder(xmlFolder,configFile);
+            LOG.info("found sqlMapFiles , xmls "+ sqlMaps);
 
-            URL resource = Resources.getResourceURL(folder);
-
-            LOG.info("=== addConfigurations : " + configFile + " -> " + folder + ", url : " + resource);
-
-            var sqlMaps = Files.walk(Paths.get(resource.toURI()))
-                    .filter(Files::isRegularFile)
-                    .map(x -> folder + "/" + x.getName(x.getNameCount() - 1))
-                    .filter(it -> it.endsWith(".xml"))
-                    .collect(Collectors.toList());
 
             var ds = (QuarkusDataSource) cfg.getEnvironment().getDataSource();
 
@@ -157,6 +151,39 @@ public class MyBatisProcessor {
             reflective.produce(ReflectiveClassBuildItem.builder(handlerSet.toArray(new Class[] {})).methods().build());
         }
 
+    }
+
+    static List<String> loadAllXmlFolder(String folders,String configFile) throws IOException, URISyntaxException {
+        List<String> maps = new ArrayList<>();
+        for(var xmlFolder: folders.split(",")) {
+
+            if (xmlFolder.charAt(0) == '/') {
+                xmlFolder = xmlFolder.substring(1);
+            }
+            var folder = xmlFolder;
+
+            URL resource = Resources.getResourceURL(folder);
+
+            // jar:file:///Users/martin/Garden/wangyue/tech/shared/build/libs/shared-1.0.0.jar!/mapper-shared
+            LOG.info("=== addConfigurations : " + configFile + " -> " + folder + ", url : " + resource);
+
+            var uri = resource.toURI();
+            if ("jar".equals(resource.getProtocol())) {
+                try (var fs = FileSystems.newFileSystem(uri, Collections.emptyMap())) {
+                    maps.addAll(walkXml(folder, fs.getPath(".")));
+                }
+            } else {
+                maps.addAll(walkXml(folder, Paths.get(uri)));
+            }
+        }
+        return maps;
+    }
+    static List<String> walkXml(String folder,Path path) throws IOException {
+        return Files.walk(path)
+                .filter(Files::isRegularFile)
+                .map(x -> folder + "/" + x.getName(x.getNameCount() - 1))
+                .filter(it -> it.endsWith(".xml"))
+                .collect(Collectors.toList());
     }
 
     static void recursionParameterizedType(Set<Class> total, Type t) {
@@ -259,4 +286,8 @@ public class MyBatisProcessor {
                 .map(mbi->mbi.getMapperName().withoutPackagePrefix()).collect(Collectors.joining(",")));
     }
 
+    public static void main(String[] args) throws MalformedURLException {
+        var url = new URL("jar:file:///Users/martin/Garden/wangyue/tech/shared/build/libs/shared-1.0.0.jar!/mapper-shared");
+        System.out.println(url.getProtocol());
+    }
 }
