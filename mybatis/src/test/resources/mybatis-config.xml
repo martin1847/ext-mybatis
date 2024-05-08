@@ -30,7 +30,7 @@
 <!--    </typeHandlers>-->
 
     <plugins>
-        <plugin interceptor="com.bt.mybatis.MysqlPagingInterceptor"/>
+        <plugin interceptor="tech.krpc.mybatis.MysqlPagingInterceptor"/>
     </plugins>
 
 

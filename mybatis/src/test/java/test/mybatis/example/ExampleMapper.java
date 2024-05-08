@@ -7,7 +7,7 @@ package test.mybatis.example;
 import java.util.List;
 import java.util.Map;
 
-import com.bt.mybatis.DbBounds;
+import tech.krpc.mybatis.DbBounds;
 import test.mybatis.dto.User;
 
 /**

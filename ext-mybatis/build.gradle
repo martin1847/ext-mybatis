@@ -18,13 +18,15 @@ quarkusExtension {
 dependencies {
 //    implementation platform("io.quarkus:quarkus-bom:${quarkusMiniSupport}")
 
-    api "io.quarkus:quarkus-arc:${quarkusMiniSupport}"
-    api "io.quarkus:quarkus-agroal:${quarkusMiniSupport}"
+    implementation "io.quarkus:quarkus-arc:${quarkusMiniSupport}"
+    implementation "io.quarkus:quarkus-agroal:${quarkusMiniSupport}"
     api project(':mybatis')
 
 
     // maven provided
-    compileOnly "org.graalvm.nativeimage:svm:$graalSdkVersion"
+//    compileOnly "org.graalvm.nativeimage:svm:$graalSdkVersion"
+    //only contains the classes required to develop substitutions.
+    compileOnly 'org.graalvm.sdk:nativeimage:24.0.1'
 
     annotationProcessor("io.quarkus:quarkus-extension-processor:${quarkusMiniSupport}")
 }

@@ -6,7 +6,7 @@ package test.mybatis;
 
 import java.util.HashMap;
 
-import com.bt.mybatis.DbBounds;
+import tech.krpc.mybatis.DbBounds;
 import org.junit.jupiter.api.Test;
 import test.mybatis.example.ExampleMapper;
 
