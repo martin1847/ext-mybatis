@@ -9,6 +9,7 @@ plugins {
 allprojects {
 
     repositories {
+        mavenLocal()
         maven{
             url "$MAVEN_REPO"
             credentials(HttpHeaderCredentials) {

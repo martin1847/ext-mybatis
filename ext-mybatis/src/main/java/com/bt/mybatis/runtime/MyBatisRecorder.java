@@ -25,7 +25,7 @@ public class MyBatisRecorder {
         Configuration cfg  = factory.createConfiguration();
         LOG.info("Setup :: " + factory);
         for(var sqlMap : mapperXml) {
-
+            sqlMap = sqlMap.startsWith("/") ? sqlMap : "/" + sqlMap;
             try (InputStream inputStream = Resources.getResourceAsStream(sqlMap)) {
                 XMLMapperBuilder mapperParser = new XMLMapperBuilder(inputStream, cfg, sqlMap, cfg.getSqlFragments());
 
