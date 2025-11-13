@@ -7,3 +7,13 @@ metadata:
   categories:
     - "data"
   status: "preview"
+  built-with-quarkus-core: "3.2.9.Final"
+  extension-dependencies:
+    - "io.quarkus:quarkus-datasource"
+    - "io.quarkus:quarkus-arc"
+    - "io.quarkus:quarkus-core"
+    - "io.quarkus:quarkus-mutiny"
+    - "io.quarkus:quarkus-agroal"
+    - "io.quarkus:quarkus-narayana-jta"
+    - "io.quarkus:quarkus-smallrye-context-propagation"
+artifact: "tech.krpc.ext:ext-mybatis::jar:1.0.1"
