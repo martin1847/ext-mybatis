@@ -37,9 +37,10 @@ subprojects {
     version = "$version"
 
 
-    sourceCompatibility = "11"
-    targetCompatibility = "11"
-
+    java{
+        sourceCompatibility = "11"
+        targetCompatibility = "11"
+    }
     // enable  gradle junit support for cli / gradle test
     test {
         useJUnitPlatform()
