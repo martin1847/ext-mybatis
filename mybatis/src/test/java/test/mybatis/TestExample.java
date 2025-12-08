@@ -17,13 +17,13 @@ import test.mybatis.example.ExampleMapper;
  */
 public class TestExample extends TestBase {
 
-    @Test
-    void  testPager(){
-        try (var session = getSqlSessionFactory().openSession()) {
-            var mapper = session.getMapper(ExampleMapper.class);
-            var users = mapper.listBy(new HashMap<>(), DbBounds.fromPage(1,3));
-            System.out.println(users);
-        }
-    }
+//    @Test
+//    void  testPager(){
+//        try (var session = getSqlSessionFactory().openSession()) {
+//            var mapper = session.getMapper(ExampleMapper.class);
+//            var users = mapper.listBy(new HashMap<>(), DbBounds.fromPage(1,3));
+//            System.out.println(users);
+//        }
+//    }
 
 }

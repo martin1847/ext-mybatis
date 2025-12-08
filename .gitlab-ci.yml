@@ -1,0 +1,13 @@
+include:
+  - project: 'it-devops/ci'
+    file:
+      - '.gradle.yml'
+
+#.changes-java:
+#  changes:
+#    - "./**/*.java"
+
+build:
+  extends: .gradle
+  script:
+    - gradle publish

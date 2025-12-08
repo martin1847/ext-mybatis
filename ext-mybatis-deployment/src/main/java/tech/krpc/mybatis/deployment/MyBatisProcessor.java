@@ -11,10 +11,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -84,7 +86,7 @@ public class MyBatisProcessor {
         var files = config.configFiles.split(",");
         //var defaultAlias =  new Configuration().getTypeAliasRegistry().getTypeAliases();
         var clsSet = new HashSet<Class>();
-
+        LOG.info("found files "+ Arrays.toString(files));
 
         var handlerSet  = new HashSet<Class>();
 
@@ -140,7 +142,7 @@ public class MyBatisProcessor {
                                 .collect(Collectors.joining(","))
                         +")");
             }
-            LOG.info("=== [ "+mapperListLog.size()+" Mapper ] for "+configFile+" :: " + mapperListLog);
+            LOG.info("=========== [ "+mapperListLog.size()+" Mapper ] for "+configFile+" :: " + mapperListLog);
 
             configurations.produce(new ConfigurationMBI(configFile, dsName, sqlMaps));
         }
@@ -168,21 +170,30 @@ public class MyBatisProcessor {
             LOG.info("=== addConfigurations : " + configFile + " -> " + folder + ", url : " + resource);
 
             var uri = resource.toURI();
-            if ("jar".equals(resource.getProtocol())) {
+            boolean isJar="jar".equals(resource.getProtocol());
+            if (isJar) {
                 try (var fs = FileSystems.newFileSystem(uri, Collections.emptyMap())) {
-                    maps.addAll(walkXml(folder, fs.getPath(".")));
+                    maps.addAll(walkXml(folder, fs.getPath("."), isJar));
                 }
             } else {
-                maps.addAll(walkXml(folder, Paths.get(uri)));
+                maps.addAll(walkXml(folder, Paths.get(uri), isJar));
             }
+            LOG.debug("=== addConfigurations : " + maps);
         }
         return maps;
     }
-    static List<String> walkXml(String folder,Path path) throws IOException {
+    static List<String> walkXml(String folder,Path path,boolean isJar) throws IOException {
         return Files.walk(path)
                 .filter(Files::isRegularFile)
-                .map(x -> folder + "/" + x.getName(x.getNameCount() - 1))
-                .filter(it -> it.endsWith(".xml"))
+                .filter(it -> !it.endsWith(".xml"))
+                .map(x ->{
+                    String fPath =folder + "/" + x.getName(x.getNameCount() - 1);
+                    if(isJar && x.getNameCount()>=2 && !folder.equals(x.getName(1).toString())){
+                        fPath =null;
+                    }
+                    LOG.debug("=== walkXml : fPath "+fPath+"=====" +x.getNameCount()+"==== "+ x.getName(0)+"====="+x.getName(1)+"====="+x.getName(x.getNameCount() - 1));
+                    return fPath;
+                }).filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 

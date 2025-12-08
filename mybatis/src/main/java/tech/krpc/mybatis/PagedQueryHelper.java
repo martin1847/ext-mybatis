@@ -23,7 +23,7 @@ public interface  PagedQueryHelper<Query> extends ToMap<Query> {
     }
 
     static  <Query,DTO> PagedList<DTO> pager(PagedQuery<Query> query, ToMap<Query> mapper,
-                                                    PagedSelect<DTO> call){
+                                             PagedSelect<DTO> call){
         return pager(query,mapper.to(query.getQ()),call);
     }
 

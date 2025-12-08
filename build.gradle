@@ -9,6 +9,7 @@ plugins {
 allprojects {
 
     repositories {
+        mavenLocal()
         maven{
             url "$MAVEN_REPO"
             credentials(HttpHeaderCredentials) {
@@ -45,6 +46,11 @@ subprojects {
     test {
         useJUnitPlatform()
     }
+
+    jar {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
+
 //    sourceCompatibility = JavaVersion.VERSION_1_8
 //    targetCompatibility = JavaVersion.VERSION_1_8
 }
