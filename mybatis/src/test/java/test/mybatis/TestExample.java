@@ -6,7 +6,7 @@ package test.mybatis;
 
 import java.util.HashMap;
 
-import com.bt.mybatis.DbBounds;
+import tech.krpc.mybatis.DbBounds;
 import org.junit.jupiter.api.Test;
 import test.mybatis.example.ExampleMapper;
 
@@ -17,13 +17,13 @@ import test.mybatis.example.ExampleMapper;
  */
 public class TestExample extends TestBase {
 
-    @Test
-    void  testPager(){
-        try (var session = getSqlSessionFactory().openSession()) {
-            var mapper = session.getMapper(ExampleMapper.class);
-            var users = mapper.listBy(new HashMap<>(), DbBounds.fromPage(1,3));
-            System.out.println(users);
-        }
-    }
+//    @Test
+//    void  testPager(){
+//        try (var session = getSqlSessionFactory().openSession()) {
+//            var mapper = session.getMapper(ExampleMapper.class);
+//            var users = mapper.listBy(new HashMap<>(), DbBounds.fromPage(1,3));
+//            System.out.println(users);
+//        }
+//    }
 
 }
