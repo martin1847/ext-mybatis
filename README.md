@@ -33,6 +33,13 @@
 
 ```
 
+## 本地测试
+
+```bash
+gradle publishToMavenLocal
+#mavenLocal()
+```
+
 ## changelogs
 
 * 2023-07-19 init1.0

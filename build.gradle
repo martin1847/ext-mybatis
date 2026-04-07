@@ -10,16 +10,16 @@ allprojects {
 
     repositories {
         mavenLocal()
-        maven{
-            url "$MAVEN_REPO"
-            credentials(HttpHeaderCredentials) {
-                name = "X-JFrog-Art-API"
-                value = System.getenv("JCR_TOKEN" )?:"$JCR_TOKEN"
-            }
-            authentication {
-                header(HttpHeaderAuthentication)
-            }
-        }
+//        maven{
+//            url "$MAVEN_REPO"
+//            credentials(HttpHeaderCredentials) {
+//                name = "X-JFrog-Art-API"
+//                value = System.getenv("JCR_TOKEN" )?:"$JCR_TOKEN"
+//            }
+//            authentication {
+//                header(HttpHeaderAuthentication)
+//            }
+//        }
         maven {
             url 'https://maven.aliyun.com/repository/public/'
         }
@@ -39,8 +39,8 @@ subprojects {
 
 
     java{
-        sourceCompatibility = "11"
-        targetCompatibility = "11"
+        sourceCompatibility = "17"
+        targetCompatibility = "17"
     }
     // enable  gradle junit support for cli / gradle test
     test {
