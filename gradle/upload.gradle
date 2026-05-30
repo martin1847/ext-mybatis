@@ -1,51 +1,92 @@
 
 apply plugin: 'maven-publish'
+apply plugin: 'signing'
+
+String gitConfig(String key) {
+    def output = new ByteArrayOutputStream()
+    exec {
+        commandLine 'git', 'config', '--get', key
+        standardOutput = output
+        ignoreExitValue = true
+    }
+    output.toString().trim()
+}
+
+Map<String, String> githubMetadata() {
+    def remoteUrl = gitConfig('remote.origin.url')
+    def matcher = remoteUrl =~ /^(?:git@github\.com:|https:\/\/github\.com\/)([^\/]+)\/(.+?)(?:\.git)?$/
+
+    if (!matcher.matches()) {
+        throw new GradleException("Cannot infer GitHub metadata from remote.origin.url: ${remoteUrl}")
+    }
+
+    def owner = matcher[0][1]
+    def repo = matcher[0][2]
+    def webUrl = "https://github.com/${owner}/${repo}"
+
+    [
+        owner: owner,
+        webUrl: webUrl,
+        scmConnection: "scm:git:${webUrl}.git",
+        scmDeveloperConnection: "scm:git:ssh://git@github.com/${owner}/${repo}.git",
+        developerName: gitConfig('user.name') ?: owner,
+        developerEmail: gitConfig('user.email')
+    ]
+}
+
+def pomMetadata = githubMetadata()
 
 java {
-//    withJavadocJar()
+    withJavadocJar()
     withSourcesJar()
 }
 
-//groovy.util.Node node
-void mavenDep(Configuration depCfg,groovy.util.Node node,String scope){
-    depCfg.allDependencies.each{dependency ->
-        node.appendNode("dependency").with {
-            it.appendNode("groupId", dependency.group)
-            it.appendNode("artifactId", dependency.name)
-            it.appendNode("version", dependency.version)
-            it.appendNode("scope", scope)
-        }
-    }
-
+tasks.withType(Javadoc).configureEach {
+    options.addStringOption('Xdoclint:none', '-quiet')
 }
 
 publishing {
     publications {
-        library(MavenPublication) {
-            from components.java
-        }
         mavenJava(MavenPublication) {
-            // providedCompile -> provided scope
-            pom.withXml  {
-                var depNode = asNode().appendNode('dependencies')
-                mavenDep(configurations.api,depNode,"compile")
-                mavenDep(configurations.compileOnly,depNode,"provided")
+            from components.java
+
+            pom {
+                name = project.name
+                description = 'Quarkus MyBatis extension for KRPC integration.'
+                url = pomMetadata.webUrl
+
+                licenses {
+                    license {
+                        name = 'Apache License, Version 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id = pomMetadata.owner
+                        name = pomMetadata.developerName
+                        email = pomMetadata.developerEmail
+                    }
+                }
+
+                scm {
+                    connection = pomMetadata.scmConnection
+                    developerConnection = pomMetadata.scmDeveloperConnection
+                    url = pomMetadata.webUrl
+                }
             }
         }
     }
 
     repositories{
-        maven{
-            url "$MAVEN_REPO"
-            credentials(HttpHeaderCredentials) {
-                name = "X-JFrog-Art-API"
-                value = System.getenv("JCR_TOKEN" )?:"$JCR_TOKEN"
-            }
-            authentication {
-                header(HttpHeaderAuthentication)
-            }
+        maven {
+            name = 'centralStaging'
+            url = layout.buildDirectory.dir('central-staging')
         }
     }
-
 }
 
+signing {
+    sign publishing.publications.mavenJava
+}
