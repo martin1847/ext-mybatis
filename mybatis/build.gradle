@@ -1,7 +1,7 @@
 group = "tech.krpc.mybatis"
 //version = '1.0.0'
 dependencies {
-    api 'org.mybatis:mybatis:3.5.16'
+    api 'org.mybatis:mybatis:3.5.19'
 
     //JSON util
     compileOnly "tech.krpc:rpc-common:$rpcVersion"
