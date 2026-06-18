@@ -83,7 +83,7 @@ public class MyBatisProcessor {
                            BuildProducer<ReflectiveClassBuildItem> reflective,
                            BuildProducer<NativeImageProxyDefinitionBuildItem> proxy) throws Exception {
 
-        var files = config.configFiles.split(",");
+        var files = config.configFiles().split(",");
         //var defaultAlias =  new Configuration().getTypeAliasRegistry().getTypeAliases();
         var clsSet = new HashSet<Class>();
         LOG.info("found files "+ Arrays.toString(files));
