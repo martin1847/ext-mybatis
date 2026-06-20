@@ -1,11 +1,13 @@
 package tech.krpc.mybatis.runtime;
 
-import io.quarkus.runtime.annotations.ConfigItem;
 import io.quarkus.runtime.annotations.ConfigPhase;
 import io.quarkus.runtime.annotations.ConfigRoot;
+import io.smallrye.config.ConfigMapping;
+import io.smallrye.config.WithDefault;
 
-@ConfigRoot(name = "mybatis", phase = ConfigPhase.BUILD_AND_RUN_TIME_FIXED)
-public class MyConfig {
+@ConfigRoot(phase = ConfigPhase.BUILD_AND_RUN_TIME_FIXED)
+@ConfigMapping(prefix = "quarkus.mybatis")
+public interface MyConfig {
     ///**
     // * Data sources config
     // */
@@ -17,8 +19,8 @@ public class MyConfig {
     /**
      * mybatis-config.xml files path, use `,` for more than one .
      */
-    @ConfigItem(defaultValue = "mybatis-config.xml")
-    public String configFiles;
+    @WithDefault("mybatis-config.xml")
+    String configFiles();
 
 
     ///**
