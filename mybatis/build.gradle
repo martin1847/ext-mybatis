@@ -15,6 +15,7 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.9.3'
 
     testImplementation 'com.mysql:mysql-connector-j:8.4.0'
+    testRuntimeOnly 'org.postgresql:postgresql:42.7.4'
     testImplementation 'org.slf4j:slf4j-simple:1.7.36'
 }
 
