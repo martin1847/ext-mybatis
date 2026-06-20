@@ -11,6 +11,8 @@ dependencies {
     // or one line testImplementation 'org.junit.jupiter:junit-jupiter:5.9.0'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.3'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.3'
+    // Gradle 9 no longer puts the JUnit Platform launcher on the test runtime classpath; declare it explicitly.
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.9.3'
 
     testImplementation 'com.mysql:mysql-connector-j:8.4.0'
     testImplementation 'org.slf4j:slf4j-simple:1.7.36'
