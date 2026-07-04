@@ -1,0 +1,46 @@
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+
+<configuration>
+
+    <properties>
+        <!-- ext-mybatis (MyBatisProcessor) reads this to walk the folder for mapper XMLs and
+             embed them as native-image resources. -->
+        <property name="SqlXmlFolder" value="/mapper"/>
+    </properties>
+
+    <settings>
+        <setting name="useGeneratedKeys" value="true"/>
+        <setting name="defaultStatementTimeout" value="25"/>
+        <setting name="mapUnderscoreToCamelCase" value="true"/>
+    </settings>
+
+    <typeAliases>
+        <!-- registers alias "widget" for the DTO (case-insensitive simple name). -->
+        <package name="tech.krpc.ext.it.dto"/>
+    </typeAliases>
+
+    <plugins>
+        <!-- The extension's PostgreSQL paging interceptor (native-it targets PG 17). -->
+        <plugin interceptor="tech.krpc.mybatis.PostgresPagingInterceptor"/>
+    </plugins>
+
+    <!-- Bind MyBatis to the Quarkus (Agroal) datasource; resolved lazily at runtime via
+         DataSources.fromName("<default>"). No live DB needed at build/augmentation time. -->
+    <environments default="q">
+        <environment id="q">
+            <transactionManager type="MANAGED">
+                <property name="closeConnection" value="false"/>
+            </transactionManager>
+            <dataSource type="tech.krpc.mybatis.runtime.bridge.QuarkusDataSourceFactory"/>
+        </environment>
+    </environments>
+
+    <mappers>
+        <!-- register the mapper interface(s) by package; the processor enumerates these for
+             native reflection + proxy + CDI bean generation. -->
+        <package name="tech.krpc.ext.it.mapper"/>
+    </mappers>
+
+</configuration>
