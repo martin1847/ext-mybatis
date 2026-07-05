@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.krpc.ext.it.mapper.WidgetMapper">
+
+    <!-- listAll: no paging, deterministic order — baseline mapper + DTO round-trip. -->
+    <select id="listAll" resultType="widget">
+        <include refid="base"/>
+        order by id
+    </select>
+
+    <!--
+      listPaged: PG ANSI limit/offset. AbstractPagingInterceptor writes offset/limit into the
+      parameter map (from DbBounds) and, when needCount, runs a count-rewritten copy of THIS sql
+      (order by + limit stripped, wrapped in select count(*)). Exercises the interceptor at
+      native runtime end to end.
+    -->
+    <select id="listPaged" resultType="widget">
+        <include refid="base"/>
+        order by id
+        limit #{limit} offset #{offset}
+    </select>
+
+    <sql id="field">
+        select id, name, qty
+    </sql>
+    <sql id="base">
+        <include refid="field"/>
+        from t_native_it
+    </sql>
+
+</mapper>

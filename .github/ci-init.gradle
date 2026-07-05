@@ -1,0 +1,38 @@
+// CI-only dependency resolution override.
+// The committed build.gradle lists mavenLocal() FIRST (fast local iteration in CN, and how the
+// tech.krpc:rpc-* artifacts are consumed during local dev). On a fresh CI runner mavenLocal() is
+// empty and non-reproducible, and the repo also keeps an Aliyun mirror (maven.aliyun.com/public)
+// that 502s from GitHub's US-hosted runners — and because Gradle only falls through to the next
+// repo on a 404 (not a 5xx), an Aliyun 502 aborts resolution instead of reaching Central. This
+// init script — applied only via --init-script in CI — replaces the repositories with Maven
+// Central + the Gradle Plugin Portal so CI resolves purely from Central (rpc-common / rpc-api and
+// every other dependency this build needs is published there). The committed build.gradle /
+// settings.gradle are untouched, so local mavenLocal-first builds are unaffected.
+allprojects {
+    repositories {
+        clear()
+        mavenCentral()
+    }
+    buildscript {
+        repositories {
+            clear()
+            gradlePluginPortal()
+            mavenCentral()
+        }
+    }
+}
+beforeSettings { settings ->
+    settings.pluginManagement {
+        repositories {
+            clear()
+            gradlePluginPortal()
+            mavenCentral()
+        }
+    }
+    settings.dependencyResolutionManagement {
+        repositories {
+            clear()
+            mavenCentral()
+        }
+    }
+}

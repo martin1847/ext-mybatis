@@ -16,3 +16,6 @@ pluginManagement {
 
 
 include 'mybatis','ext-mybatis','ext-mybatis-deployment'
+// native-it: native-image smoke consumer app (verifies ext-mybatis native augmentation +
+// real PG mapper round-trip). Not published — root build.gradle skips upload.gradle for it.
+include 'native-it'

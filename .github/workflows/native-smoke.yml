@@ -1,0 +1,130 @@
+# Native-image smoke for the ext-mybatis Quarkus extension. ext-mybatis is a MyBatis persistence
+# extension (a library) and cannot be native-compiled on its own, so this builds the native-it
+# consumer app (a Quarkus COMMAND-MODE app depending on the LOCAL ext-mybatis +
+# ext-mybatis-deployment projects) as a GraalVM native image AND boots it against a REAL
+# PostgreSQL 17 to prove the extension's native augmentation works end to end:
+#   - the WidgetMapper interface + Widget DTO are registered for native reflection — dropping
+#     either makes the mapper query throw / result fields come back null at native runtime, so the
+#     app prints NATIVE-IT FAIL and exits non-zero;
+#   - the mapper XML resource is embedded in the native image and its statements bind;
+#   - the PostgresPagingInterceptor count-rewrite + offset/limit round-trips against the real DB.
+# The "no ClassNotFoundException in the build log" assertion is the direct guard that no
+# mapper/DTO reflection was silently skipped via Class.forName during native augmentation.
+name: native-smoke
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    # Only on changes that can affect the native image; skip doc-only PRs to save CI minutes.
+    paths:
+      - '**/*.java'
+      - '**/*.gradle'
+      - '**/*.properties'
+      - '**/*.xml'
+      - '**/native-image/**'
+      - '.github/workflows/native-smoke.yml'
+      - '.github/ci-init.gradle'
+permissions:
+  contents: read
+concurrency:
+  group: native-smoke-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      # Real PostgreSQL 17 for the native mapper round-trip. Creds/db match
+      # native-it/src/main/resources/application.properties (krpc / krpc / krpc_test) and the port
+      # is mapped to host 5433 so the app connects at jdbc:postgresql://localhost:5433/krpc_test
+      # with ZERO env overrides — CI runs exactly what a dev runs locally against their :5433 PG.
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: krpc
+          POSTGRES_PASSWORD: krpc
+          POSTGRES_DB: krpc_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U krpc -d krpc_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Mandrel (GraalVM) JDK 21
+        uses: graalvm/setup-graalvm@v1
+        with:
+          distribution: 'mandrel'
+          java-version: '21'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ext-mybatis does not commit a Gradle wrapper (.gitignore excludes gradlew* / wrapper/), so
+      # pin the same Gradle the extension is developed against instead of ./gradlew.
+      - name: Set up Gradle 9.6.0
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+
+      - name: Build native-it native image (host toolchain, no container)
+        run: |
+          set -euo pipefail
+          # Tee the whole build so the next step can assert the log is CNFE-free. --init-script
+          # routes resolution to Maven Central (the committed build.gradle is mavenLocal-first with
+          # an Aliyun mirror that 502s from GitHub runners; Gradle won't fall through a 5xx).
+          gradle --init-script .github/ci-init.gradle :native-it:build \
+            -Dquarkus.native.enabled=true \
+            -Dquarkus.native.container-build=false \
+            -Dquarkus.package.jar.enabled=false \
+            -x test 2>&1 | tee /tmp/native-build.log
+
+      - name: Assert native build log is CNFE-free (mapper/DTO reflection-registration guard)
+        run: |
+          set -euo pipefail
+          # ext-mybatis's native augmentation loads the mapper interfaces + DTOs named in
+          # mybatis-config.xml / mapper XML to register them for native reflection. If any is
+          # missing from the augmentation classloader, that load throws ClassNotFoundException
+          # (and/or prints a stack trace) and the registration is silently dropped — after which
+          # the row would come back null at native runtime. Neither marker may appear. Precise
+          # grep so an unrelated substring can't mask a real regression.
+          if grep -nE 'ClassNotFoundException|printStackTrace' /tmp/native-build.log; then
+            echo "::error::forbidden marker (ClassNotFoundException / printStackTrace) in the native build log"
+            exit 1
+          fi
+          echo "PASS: no ClassNotFoundException / printStackTrace in the native build log"
+
+      - name: Boot the native runner + assert real-PG mapper round-trip
+        run: |
+          set -euo pipefail
+          RUNNER=$(ls native-it/build/*-runner)
+          echo "runner: $RUNNER"; file "$RUNNER"
+          # Command-mode app: seeds PG, runs the mapper queries, asserts exact field values, and
+          # exits 0 on PASS / 1 on any failure. It runs to completion (not a server), so capture
+          # its output and exit code directly.
+          set +e
+          "$RUNNER" >/tmp/native-it.log 2>&1
+          rc=$?
+          set -e
+          echo "--- native-it log ---"; cat /tmp/native-it.log
+
+          # (1) actually ran as a native image, not a JVM fallback.
+          grep -q "native (powered by Quarkus" /tmp/native-it.log \
+            || { echo "::error::runner did not report native mode"; exit 1; }
+
+          # (2) STRONG content assertion — exact seeded field VALUES (not just row counts), so a
+          # dropped mapper/DTO native-reflection registration (null fields) flips this to a miss.
+          grep -q "NATIVE-IT PASS listAll: 5 widgets, id1=alpha(10), id5=echo(50)" /tmp/native-it.log \
+            || { echo "::error::listAll round-trip failed — mapper/DTO native reflection?"; exit 1; }
+
+          # (3) PostgresPagingInterceptor count-rewrite + offset/limit round-trip at native runtime.
+          grep -q "NATIVE-IT PASS paged: page2size2 -> id3=charlie(30), id4=delta(40); count=5" /tmp/native-it.log \
+            || { echo "::error::paging interceptor round-trip failed at native runtime"; exit 1; }
+
+          grep -q "NATIVE-IT ALL PASS" /tmp/native-it.log \
+            || { echo "::error::NATIVE-IT did not report ALL PASS"; exit 1; }
+
+          # (4) the app's own exit code must agree with the log markers.
+          [ "$rc" -eq 0 ] || { echo "::error::native runner exited $rc"; exit 1; }
+          echo "PASS: native ext-mybatis mapper + DTO reflection + PG paging round-trip verified"

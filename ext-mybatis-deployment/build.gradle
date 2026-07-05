@@ -4,4 +4,15 @@ dependencies {
     implementation "io.quarkus:quarkus-agroal-deployment:${quarkusMiniSupport}"
     implementation project(':ext-mybatis')
     annotationProcessor("io.quarkus:quarkus-extension-processor:${quarkusMiniSupport}")
+
+    // --- test: QuarkusUnitTest harness exercising the real QuarkusDataSource + Agroal + JTA path ---
+    testImplementation("io.quarkus:quarkus-junit5-internal:${quarkusMiniSupport}") {
+        // Drags a guice GMM "-classes" variant unresolvable from the local Maven cache (mirrors
+        // examples/quickstart + test-server). Not needed for QuarkusUnitTest.
+        exclude module: 'quarkus-bootstrap-maven-resolver'
+    }
+    testImplementation "io.quarkus:quarkus-jdbc-postgresql-deployment:${quarkusMiniSupport}"
+    testImplementation "io.quarkus:quarkus-narayana-jta-deployment:${quarkusMiniSupport}"
+    testRuntimeOnly "org.postgresql:postgresql:42.7.4"
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.9.3'
 }

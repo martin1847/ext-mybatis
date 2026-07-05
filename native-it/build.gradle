@@ -1,0 +1,48 @@
+// ext-mybatis native integration-test app — an IT/verification artifact, NEVER published
+// (the root build.gradle guard skips upload.gradle for this module, so it produces no Maven
+// publication and never enters the release bundle).
+//
+// A minimal Quarkus COMMAND-MODE consumer whose sole job is to give the ext-mybatis extension
+// something to native-compile against THIS branch, then prove — at native runtime, against a
+// real PostgreSQL — that the extension's native augmentation actually works end to end:
+//   - mapper interface + DTO are registered for native reflection (drop either → query throws /
+//     fields come back null → assertions fail, exit 1);
+//   - mapper XML resource is embedded in the native image and its statements bind;
+//   - the PostgresPagingInterceptor count-rewrite + offset/limit round-trips through a real DB.
+// The build log is also asserted CNFE-free (see native-smoke.yml), the direct guard that no
+// mapper/DTO reflection was silently skipped via Class.forName during augmentation.
+plugins {
+    // Version comes from the root plugins block (declared apply false there) so both quarkus
+    // plugins share one classloader — see root build.gradle. No version here.
+    id 'io.quarkus'
+}
+
+group = "tech.krpc.ext.it"
+
+// Java 21 comes from the root subprojects block (ext-mybatis is a JDK-21 krpc extension).
+
+// The generated ext-mybatis extension descriptor points at the deployment artifact by the
+// bumped version (tech.krpc.ext:ext-mybatis-deployment:<version>), which is NOT published.
+// Force both ext-mybatis artifacts onto the local projects so augmentation + native reflection
+// run the code under test on THIS branch — not a Central release.
+configurations.all {
+    resolutionStrategy.dependencySubstitution {
+        substitute module('tech.krpc.ext:ext-mybatis') using project(':ext-mybatis')
+        substitute module('tech.krpc.ext:ext-mybatis-deployment') using project(':ext-mybatis-deployment')
+    }
+}
+
+dependencies {
+    // Local extension under test — explicit so the "test this branch" intent is on the page,
+    // and so Quarkus deployment resolution anchors on the project (which wires the local
+    // :ext-mybatis-deployment via the extension descriptor).
+    implementation project(':ext-mybatis')
+
+    implementation platform("io.quarkus.platform:quarkus-bom:${quarkusMiniSupport}")
+    implementation "io.quarkus:quarkus-arc"
+    // Agroal connection pool + PostgreSQL JDBC driver (with the native reflection/resource
+    // config Quarkus ships) — the real DB path ext-mybatis's QuarkusDataSource resolves at
+    // runtime via DataSources.fromName.
+    implementation "io.quarkus:quarkus-agroal"
+    implementation "io.quarkus:quarkus-jdbc-postgresql"
+}
