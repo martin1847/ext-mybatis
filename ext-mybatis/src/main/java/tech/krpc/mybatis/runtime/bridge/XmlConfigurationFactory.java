@@ -15,6 +15,8 @@ import org.jboss.logging.Logger;
 public class XmlConfigurationFactory implements ConfigurationFactory {
 
     private static final Logger LOG = Logger.getLogger(XmlConfigurationFactory.class);
+    // Static guard → warns once per classloader (Quarkus loads this class in both the augmentation
+    // and runtime classloaders, so expect one line from each pass — not one line globally).
     private static volatile boolean warnedCloseConnectionOverride = false;
 
     private String mybatisConfigFile;
@@ -61,7 +63,9 @@ public class XmlConfigurationFactory implements ConfigurationFactory {
      * self-returns the pooled connection after each auto-session — the only correct behaviour here.
      * A consumer's explicit {@code closeConnection=false} is overridden: under Quarkus+Agroal there is
      * no legal way to rely on the "container closes it" semantics (there is no such container hook),
-     * so the override is a fix, not a betrayal — but we warn once so it is visible. The override is
+     * so the override is a fix, not a betrayal — but we warn once per classloader (the guard is a static
+     * flag, so augmentation- and runtime-classloader passes each emit one line) so it stays visible.
+     * The override is
      * scoped strictly to {@link QuarkusDataSource}; any other DataSource (where the consumer may own
      * the lifecycle) is left untouched.
      *
@@ -98,14 +102,20 @@ public class XmlConfigurationFactory implements ConfigurationFactory {
         }
     }
 
-    /** Reads the private {@code closeConnection} flag; treats an unreadable field as already-safe. */
+    /**
+     * Reads the private {@code closeConnection} flag. Any read failure is treated as
+     * <em>not-yet-safe</em> (returns {@code false}) so the caller force-sets {@code closeConnection=true}
+     * unconditionally — fail-closed, never fail-open.
+     */
     private static boolean readsWithConnectionClosed(ManagedTransactionFactory factory) {
         try {
             Field f = ManagedTransactionFactory.class.getDeclaredField("closeConnection");
             f.setAccessible(true);
             return f.getBoolean(factory);
-        } catch (ReflectiveOperationException e) {
-            // Field name changed across MyBatis versions — force-set true unconditionally is still safe.
+        } catch (Exception e) {
+            // Any failure — field renamed across MyBatis versions (ReflectiveOperationException),
+            // module access denied (InaccessibleObjectException), or a SecurityManager veto
+            // (SecurityException) — is treated as unsafe so the override forces true. Fail-closed.
             return false;
         }
     }

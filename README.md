@@ -33,7 +33,8 @@
 >
 > ⚠️ 历史提示：早期文档示例写过 `<property name="closeConnection" value="false"/>`。在
 > Quarkus + Agroal 下**没有**"容器收尾"钩子来归还非事务连接，该配置会导致每次非事务读泄漏一条
-> 连接直至池耗尽。现在框架会覆盖它为安全语义并 warn 一次；请从配置里删除该属性。
+> 连接直至池耗尽。现在框架会覆盖它为安全语义并**每个 classloader warn 一次**(Quarkus 在
+> augmentation 与 runtime 两个 classloader 各加载一次本类,故各出一条,非全局一条);请从配置里删除该属性。
 
 ### 显式事务（重场景 opt-in）
 
@@ -68,6 +69,6 @@ gradle publishToMavenLocal
 * 2026-07-05 conn-leak fix (EXTMYB-LEAK-001): 生态默认取向为弱事务、吞吐优先——非事务操作用完
   即还连接，重场景用 `@Transactional`/JTA 显式 opt-in（事务结束才还）。为此，`MANAGED` +
   `QuarkusDataSource` 拓扑下框架强制连接归还语义（覆盖消费者显式的 `closeConnection=false` 并
-  warn 一次），修复非事务读每请求泄漏一条连接、打满池即 acquisition timeout 的缺陷。**行为变更**：
+  warn 一次/classloader），修复非事务读每请求泄漏一条连接、打满池即 acquisition timeout 的缺陷。**行为变更**：
   之前显式设 `closeConnection=false` 的配置，其非事务读连接现在会被归还（此前是泄漏）；事务语义不变。
 
