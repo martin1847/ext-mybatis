@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tech.krpc.mybatis.it.WidgetMapper">
+
+    <resultMap type="tech.krpc.mybatis.it.Widget" id="DTO" autoMapping="true"/>
+
+    <select id="getWidget" resultMap="DTO">
+        select id, name from leak_widget where id = #{_parameter}
+    </select>
+
+    <insert id="save">
+        insert into leak_widget (id, name) values (#{id}, #{name})
+    </insert>
+
+    <delete id="remove">
+        delete from leak_widget where id = #{_parameter}
+    </delete>
+
+</mapper>

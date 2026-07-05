@@ -1,0 +1,33 @@
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+
+<configuration>
+
+    <properties>
+        <property name="SqlXmlFolder" value="/it-mapper"/>
+    </properties>
+
+    <settings>
+        <setting name="mapUnderscoreToCamelCase" value="true"/>
+    </settings>
+
+    <!-- Deliberately the HISTORICALLY-LEAKING config: MANAGED + closeConnection=false +
+         QuarkusDataSourceFactory. The ext-mybatis safe-by-construction guard
+         (XmlConfigurationFactory.enforceCloseConnectionForQuarkusDataSource) must force
+         closeConnection=true so non-tx reads no longer leak. This config MUST stay closeConnection=false
+         — it is the regression trigger the fix defends against. -->
+    <environments default="q">
+        <environment id="q">
+            <transactionManager type="MANAGED">
+                <property name="closeConnection" value="false"/>
+            </transactionManager>
+            <dataSource type="tech.krpc.mybatis.runtime.bridge.QuarkusDataSourceFactory"/>
+        </environment>
+    </environments>
+
+    <mappers>
+        <package name="tech.krpc.mybatis.it"/>
+    </mappers>
+
+</configuration>
