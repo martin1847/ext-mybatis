@@ -11,6 +11,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
 
 import jakarta.inject.Inject;
 
@@ -30,13 +31,16 @@ import org.junit.jupiter.api.extension.RegisterExtension;
  * must force {@code closeConnection=true} so MyBatis returns the pooled connection after each
  * auto-session.
  *
- * <p>Two contracts:
+ * <p>Three contracts:
  * <ol>
  *   <li><b>Pool-exhaustion regression</b>: fire {@code >2x} pool-size sequential non-transactional
  *       reads. Pre-fix, a per-request leak exhausts the pool at call {@code max+1} (acquisition
  *       timeout). Post-fix, all reads succeed because each connection is returned.</li>
  *   <li><b>Transaction safety</b>: with an active JTA transaction, {@code closeConnection=true} must
  *       NOT end the transaction early — multi-statement commit atomicity and rollback both hold.</li>
+ *   <li><b>Enlisted-connection reuse</b>: multiple mapper calls inside one {@code @Transactional}
+ *       method all report the same {@code pg_backend_pid()} — the tx connection is not swapped
+ *       mid-transaction by the per-call close.</li>
  * </ol>
  *
  * <p>Requires PostgreSQL on localhost:5433 (the dev IT database, as used by
@@ -56,7 +60,17 @@ public class ConnLeakRegressionTest {
                     .addClasses(Widget.class, WidgetMapper.class, WidgetTxService.class)
                     .addAsResource("it-mybatis-config.xml")
                     .addAsResource("it-mapper/WidgetMapper.xml", "it-mapper/WidgetMapper.xml")
-                    .addAsResource("application.properties"));
+                    .addAsResource("application.properties"))
+            // Env-proof: a stray QUARKUS_DATASOURCE_* env var (env-var config source, ordinal 300)
+            // otherwise outranks application.properties (ordinal 250) and feeds Agroal the wrong
+            // credentials. overrideRuntimeConfigKey routes through RuntimeOverrideConfigSource
+            // (ordinal 399 > 300), so these datasource values win over any host-shell env var and the
+            // IT datasource is pinned. (overrideConfigKey would NOT suffice — it merges into the
+            // archive's application.properties at ordinal 250, still below the env var.)
+            .overrideRuntimeConfigKey("quarkus.datasource.username", JDBC_USER)
+            .overrideRuntimeConfigKey("quarkus.datasource.password", JDBC_PASSWORD)
+            .overrideRuntimeConfigKey("quarkus.datasource.jdbc.url",
+                    "jdbc:postgresql://localhost:5433/krpc_test?ApplicationName=extmyb-it-pool");
 
     @Inject
     WidgetMapper widgetMapper;
@@ -105,6 +119,25 @@ public class ConnLeakRegressionTest {
         assertThrows(IllegalStateException.class, () -> txService.saveThenThrow(103, "rollback-me"));
         assertFalse(rowExists(103),
                 "row 103 must be ROLLED BACK — forced closeConnection=true must not end the JTA tx early");
+    }
+
+    /**
+     * Same-connection proof: multiple mapper calls inside ONE {@code @Transactional} method must run on
+     * the SAME physical connection. {@code pg_backend_pid()} returns the server-side backend PID, unique
+     * per connection, so identical PIDs across calls prove the enlisted connection is reused and
+     * forced {@code closeConnection=true} does not swap connections mid-transaction.
+     */
+    @Test
+    void mapperCallsInOneTransactionReuseSameConnection() {
+        List<Integer> pids = txService.backendPidsInOneTx(3);
+        assertEquals(3, pids.size(), "expected one PID per mapper call");
+        Integer first = pids.get(0);
+        assertTrue(first != null && first > 0, "pg_backend_pid() must return a real backend PID");
+        for (int i = 1; i < pids.size(); i++) {
+            assertEquals(first, pids.get(i),
+                    "call #" + (i + 1) + " ran on a DIFFERENT connection (pid " + pids.get(i)
+                            + " != " + first + ") — the enlisted tx connection was not reused");
+        }
     }
 
     private static boolean rowExists(int id) throws SQLException {

@@ -10,4 +10,7 @@ public interface WidgetMapper {
     Integer save(@Param("id") Integer id, @Param("name") String name);
 
     boolean remove(Integer id);
+
+    /** Returns the PostgreSQL backend PID of the connection serving this call ({@code pg_backend_pid()}). */
+    Integer backendPid();
 }
