@@ -4,7 +4,7 @@
 
 基于[Quarkus](https://quarkus.io/)的自动扫描注入,以`quarkus-extension`扩展形式提供.
 
-`globalRpcVersion`:`1.0.0`
+`globalRpcVersion`:`1.0.2`
 
 ```groovy
     implementation "tech.krpc.ext:ext-mybatis:$globalRpcVersion"
