@@ -50,7 +50,7 @@ publishing {
 
             pom {
                 name = project.name
-                description = 'Quarkus MyBatis extension for KRPC integration.'
+                description = provider { project.description ?: 'A krpc Quarkus extension module — contract-first, agent-native gRPC/HTTP2 for agent-era Java microservices.' }
                 url = pomMetadata.webUrl
 
                 licenses {

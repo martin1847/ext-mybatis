@@ -1,3 +1,5 @@
+description = 'krpc Quarkus MyBatis extension (deployment) — build-time augmentation wiring MyBatis mappers and the Agroal datasource for native and JVM builds.'
+
 dependencies {
 //    implementation platform("io.quarkus:quarkus-bom:${quarkusMiniSupport}")
     implementation "io.quarkus:quarkus-arc-deployment:${quarkusMiniSupport}"
