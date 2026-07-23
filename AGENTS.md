@@ -2,8 +2,9 @@
 
 Quarkus extension that integrates MyBatis with KRPC: auto-scan discovery and injection
 of `Mapper`s over a Quarkus/Agroal `QuarkusDataSource`, weak-transaction / throughput-
-first data access. Artifact `tech.krpc.ext:ext-mybatis` (currently `1.0.2`; `rpc-*` deps
-at `1.0.3`). Capability-cluster ownership lives in the umbrella `docs/modules/extensions.md`.
+first data access. Artifact `tech.krpc.ext:ext-mybatis` (version and `rpc-*` pin:
+`gradle.properties` is authoritative — do not trust versions quoted in prose).
+Capability-cluster ownership lives in the umbrella `docs/modules/extensions.md`.
 
 ## Scope
 
@@ -42,8 +43,8 @@ Java 21 baseline (build.gradle `sourceCompatibility 21`); Gradle wrapper 9.6.0.
   recipe) (not verified).
 - `./gradlew testNative` (in `native-it`) — native smoke; needs GraalVM (not verified).
 
-Note: README's `globalRpcVersion:1.0.0` coordinate is stale; the build files
-(`version 1.0.2`, `rpcVersion 1.0.3`) are authoritative.
+Note: README install coordinates may lag releases; `gradle.properties` is
+authoritative.
 
 ## Discipline
 
