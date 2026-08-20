@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+  EXTMYB-STRICT-001 fixture mapper. The typeHandler attribute below is the whole point: it is the
+  production registration path that puts JsonTypeHandler.getNullableResult on the read path.
+-->
+<mapper namespace="tech.krpc.mybatis.type.JsonStrictMatrixMapper">
+
+    <resultMap id="matrixRow" type="tech.krpc.mybatis.type.MatrixRow">
+        <result property="cell" column="cell"/>
+        <result property="payload" column="payload"
+                typeHandler="tech.krpc.mybatis.type.FixtureJsonListHandler"/>
+    </resultMap>
+
+    <select id="findByCell" resultMap="matrixRow">
+        select cell, payload from t_json_strict_matrix where cell = #{cell}
+    </select>
+
+</mapper>
