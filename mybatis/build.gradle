@@ -17,6 +17,12 @@ dependencies {
     testImplementation 'com.mysql:mysql-connector-j:8.4.0'
     testRuntimeOnly 'org.postgresql:postgresql:42.7.4'
     testImplementation 'org.slf4j:slf4j-simple:1.7.36'
+
+    // EXTMYB-STRICT-001 (test-only): JsonUtils — the JSON decoder AbstractJsonListHandler calls —
+    // lives in rpc-common, which the MAIN source set deliberately takes compileOnly. The decoding
+    // matrix drives the real handler, so it needs the real decoder at TEST runtime. Test scope
+    // only: nothing about the published POM changes.
+    testImplementation "tech.krpc:rpc-common:$rpcVersion"
 }
 
 compileJava{
@@ -27,4 +33,79 @@ compileJava{
             '--add-exports', 'jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED,ALL-UNNAMED',
             '--add-exports', 'jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED,ALL-UNNAMED'
         ]
+}
+
+// ---------------------------------------------------------------------------------------------
+// EXTMYB-STRICT-001 — the JSON strict-decoding behaviour matrix.
+//
+// JsonUtils resolves the KRPC_JSON_STRICT kill switch once and caches it in a private static
+// field, and a Jackson ObjectMapper cannot be reconfigured after first use: ONE JVM can observe
+// exactly ONE switch state. The two expectation sets therefore run as two separate forked test
+// tasks with explicitly-built environments, and the default `test` task must not run either of
+// them (it would inherit whatever the developer's shell happens to export).
+// ---------------------------------------------------------------------------------------------
+
+def matrixClasses = [
+        strict : 'tech.krpc.mybatis.type.JsonStrictMatrixStrictModeTest',
+        lenient: 'tech.krpc.mybatis.type.JsonStrictMatrixLenientModeTest',
+]
+
+/** Parent environment minus the kill switch, plus the overrides this mode needs. */
+def matrixEnvironment = { Map<String, String> overrides ->
+    def env = new LinkedHashMap<String, String>(System.getenv())
+    env.remove('KRPC_JSON_STRICT')
+    env.putAll(overrides)
+    return env
+}
+
+// The rpc-common artifact this build actually resolved onto the test runtime classpath — the same
+// resolution `dependencyInsight --dependency rpc-common --configuration testRuntimeClasspath`
+// reports. Injected into each fork so the provenance guard can bind "the class we loaded" to "the
+// artifact the build resolved" instead of settling for "some jar". Lazy: an artifactView is not
+// resolved at configuration time.
+def rpcCommonCoordinate = "tech.krpc:rpc-common:$rpcVersion"
+def rpcCommonArtifact = configurations.testRuntimeClasspath.incoming.artifactView {
+    componentFilter { id -> id.displayName.startsWith('tech.krpc:rpc-common:') }
+}.files
+
+def registerMatrixTest = { String taskName, String mode, Map<String, String> overrides, String why ->
+    tasks.register(taskName, Test) {
+        group = 'verification'
+        description = why
+        testClassesDirs = sourceSets.test.output.classesDirs
+        classpath = sourceSets.test.runtimeClasspath
+        useJUnitPlatform()
+        filter { includeTestsMatching matrixClasses[mode] }
+        environment = matrixEnvironment(overrides)
+        systemProperty 'strict.matrix.mode', mode
+        systemProperty 'strict.matrix.rpcCommonCoordinate', rpcCommonCoordinate
+        doFirst {
+            def jars = rpcCommonArtifact.files
+            if (jars.size() != 1) {
+                throw new GradleException("EXTMYB-STRICT-001: expected exactly one rpc-common artifact"
+                        + " on testRuntimeClasspath, resolved $jars")
+            }
+            systemProperty 'strict.matrix.rpcCommonJar', jars.first().absolutePath
+        }
+        maxParallelForks = 1
+        // The run also emits provenance evidence (build/strict-matrix-evidence/), which must
+        // reflect THIS run rather than a cached one.
+        outputs.upToDateWhen { false }
+        testLogging {
+            events 'passed', 'failed'
+            exceptionFormat 'full'
+        }
+    }
+}
+
+registerMatrixTest('strictMatrixTest', 'strict', [:],
+        'JSON decoding matrix with KRPC_JSON_STRICT explicitly ABSENT (1.2.0 default: strict).')
+registerMatrixTest('lenientMatrixTest', 'lenient', ['KRPC_JSON_STRICT': 'false'],
+        'JSON decoding matrix with the KRPC_JSON_STRICT kill switch thrown (the lenient decoder of'
+                + ' rpc-common 1.2.0; the krpc 1.2.0 CHANGELOG #56 contract calls that state the'
+                + ' pre-1.2 behaviour — not measured here, no pre-1.2 rpc-common is ever run).')
+
+tasks.named('test') {
+    matrixClasses.values().each { filter.excludeTestsMatching it }
+    dependsOn 'strictMatrixTest', 'lenientMatrixTest'
 }
