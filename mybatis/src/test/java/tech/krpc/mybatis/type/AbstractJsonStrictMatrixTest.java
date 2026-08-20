@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -276,8 +277,24 @@ abstract class AbstractJsonStrictMatrixTest {
         return facts;
     }
 
+    /**
+     * The filesystem path a class was loaded from.
+     *
+     * <p>{@code URL.getPath()} would leave percent-escapes in place — a checkout at
+     * {@code /tmp/checkout#2} reports {@code /tmp/checkout%232} — and that string never compares
+     * equal to the real path, so the provenance guard would false-reject a legitimate location on
+     * any machine whose checkout or dependency cache contains {@code #}, {@code %} or non-ASCII
+     * characters. Going {@code URL -> URI -> Path} decodes them with file-URL semantics;
+     * {@code URLDecoder} would be wrong here because it also turns {@code +} into a space.
+     */
     private static String codeSource(Class<?> type) {
-        return type.getProtectionDomain().getCodeSource().getLocation().getPath();
+        URL location = type.getProtectionDomain().getCodeSource().getLocation();
+        try {
+            return Path.of(location.toURI()).toString();
+        } catch (URISyntaxException e) {
+            throw new IllegalStateException("EXTMYB-STRICT-001: cannot decode the CodeSource of "
+                    + type.getName() + ": " + location, e);
+        }
     }
 
     /**

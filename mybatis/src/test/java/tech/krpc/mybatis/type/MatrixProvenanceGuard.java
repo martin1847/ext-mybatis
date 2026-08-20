@@ -77,11 +77,13 @@ final class MatrixProvenanceGuard {
     }
 
     /**
-     * A {@code CodeSource} location is a URL path: directories carry a trailing slash and may be
-     * percent-encoded on paths with spaces. Normalizing drops the trailing slash so a directory and
-     * its slash-less spelling compare equal.
+     * Callers pass an already-decoded filesystem path (see
+     * {@code AbstractJsonStrictMatrixTest.codeSource}, which converts the {@code CodeSource} URL
+     * via {@code URI} rather than {@code URL.getPath()}, so percent-escapes never reach here).
+     * Normalizing drops the trailing slash a directory location carries, so a directory and its
+     * slash-less spelling compare equal.
      */
     private static Path normalize(String location) {
-        return Path.of(location.replace("%20", " ")).toAbsolutePath().normalize();
+        return Path.of(location).toAbsolutePath().normalize();
     }
 }

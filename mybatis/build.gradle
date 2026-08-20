@@ -101,7 +101,9 @@ def registerMatrixTest = { String taskName, String mode, Map<String, String> ove
 registerMatrixTest('strictMatrixTest', 'strict', [:],
         'JSON decoding matrix with KRPC_JSON_STRICT explicitly ABSENT (1.2.0 default: strict).')
 registerMatrixTest('lenientMatrixTest', 'lenient', ['KRPC_JSON_STRICT': 'false'],
-        'JSON decoding matrix with the KRPC_JSON_STRICT kill switch thrown (pre-1.2 semantics).')
+        'JSON decoding matrix with the KRPC_JSON_STRICT kill switch thrown (the lenient decoder of'
+                + ' rpc-common 1.2.0; the krpc 1.2.0 CHANGELOG #56 contract calls that state the'
+                + ' pre-1.2 behaviour — not measured here, no pre-1.2 rpc-common is ever run).')
 
 tasks.named('test') {
     matrixClasses.values().each { filter.excludeTestsMatching it }
