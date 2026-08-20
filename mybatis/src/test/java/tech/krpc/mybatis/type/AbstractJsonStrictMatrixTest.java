@@ -157,23 +157,16 @@ abstract class AbstractJsonStrictMatrixTest {
     }
 
     /**
-     * Guard wired from each concrete subclass: the switch state this expectation set was written
-     * for must be the state the JVM actually resolved. Asserts the raw environment variable AND
-     * the observed decoder behaviour, so a task whose env wiring silently regressed cannot pass
-     * by luck.
+     * Behaviour probe of the resolved kill switch: a JSON integer into a {@code String} field is
+     * the one shape strict decoding refuses, so a successful parse means lenient and a
+     * {@code JsonDecodeException} means strict.
+     *
+     * <p>This returns an observation; it asserts nothing. Each concrete subclass writes its own
+     * literal mode guard against it — there is deliberately no shared {@code requireMode(boolean)}
+     * helper, because a parameterized expected value is exactly the conditional-expectation shape
+     * this goal forbids (GR-009).
      */
-    static void requireMode(boolean expectStrict) {
-        assertEquals(expectStrict ? null : "false", System.getenv(JsonUtils.STRICT_TEXTUAL_COERCION_ENV),
-                "KRPC_JSON_STRICT as seen by this forked JVM");
-        assertEquals(expectStrict, observedStrict(), "decoder behaviour observed via JsonUtils");
-    }
-
-    /**
-     * Behaviour probe of the resolved kill switch: an integer into a String field is the one shape
-     * strict decoding refuses. Not an assertion — the evidence file records it and
-     * {@link #requireMode} asserts it.
-     */
-    private static boolean observedStrict() {
+    static boolean observedStrict() {
         try {
             JsonUtils.parse("{\"legacyId\":1}", FixtureDto.class);
             return false;
@@ -234,10 +227,13 @@ abstract class AbstractJsonStrictMatrixTest {
 
     /**
      * Premise evidence, asserted as a hard precondition and dumped to
-     * {@code build/strict-matrix-evidence/}: the three classes on the measured path must come from
-     * THIS worktree's {@code :mybatis} output plus the pinned {@code rpc-common} jar, and
-     * {@code JsonUtils} must appear exactly once on the classpath. A published ext-mybatis artifact
-     * anywhere on that path would mean the matrix measured Central, not this tree.
+     * {@code build/strict-matrix-evidence/}.
+     *
+     * <p>Every binding here is POSITIVE: the two handler classes must load from this worktree's own
+     * {@code build/classes/java/main}, and {@code JsonUtils} must load from the exact artifact
+     * Gradle resolved for {@code tech.krpc:rpc-common:<rpcVersion>} on the test runtime classpath.
+     * See {@link MatrixProvenanceGuard} for why a "reject paths containing ext-mybatis" blocklist
+     * fails open here.
      */
     private static Map<String, String> provenance() throws Exception {
         Map<String, String> facts = new LinkedHashMap<>();
@@ -247,20 +243,21 @@ abstract class AbstractJsonStrictMatrixTest {
         facts.put("env." + JsonUtils.STRICT_TEXTUAL_COERCION_ENV, env == null ? "<unset>" : "\"" + env + "\"");
         facts.put("observedStrict", String.valueOf(observedStrict()));
 
-        for (Class<?> type : List.of(JsonTypeHandler.class, AbstractJsonListHandler.class, JsonUtils.class)) {
+        // Test working directory is the :mybatis project dir, so this is THIS worktree's output.
+        Path worktreeClasses = Path.of("build", "classes", "java", "main");
+        facts.put("expected.handlerClasses", worktreeClasses.toAbsolutePath().normalize().toString());
+        for (Class<?> type : List.of(JsonTypeHandler.class, AbstractJsonListHandler.class)) {
             String location = codeSource(type);
-            if (location.contains("ext-mybatis")) {
-                throw new IllegalStateException("EXTMYB-STRICT-001: " + type.getName() + " loaded from a"
-                        + " published ext-mybatis artifact (" + location + ") — the matrix must measure"
-                        + " this worktree's :mybatis output, not Central");
-            }
+            MatrixProvenanceGuard.requireWorktreeClasses(type.getName(), location, worktreeClasses);
             facts.put("codeSource." + type.getSimpleName(), location);
         }
+
+        String coordinate = requiredProperty("strict.matrix.rpcCommonCoordinate");
+        Path resolvedJar = Path.of(requiredProperty("strict.matrix.rpcCommonJar"));
+        facts.put("gradleResolved.rpcCommon", coordinate + " -> " + resolvedJar);
         String jsonUtilsJar = codeSource(JsonUtils.class);
-        if (!jsonUtilsJar.endsWith(".jar")) {
-            throw new IllegalStateException("EXTMYB-STRICT-001: JsonUtils must come from the pinned"
-                    + " rpc-common jar, got " + jsonUtilsJar);
-        }
+        MatrixProvenanceGuard.requireResolvedDecoderJar(jsonUtilsJar, resolvedJar, coordinate);
+        facts.put("codeSource.JsonUtils", jsonUtilsJar);
         facts.put("sha256.rpc-common.jar", sha256(Path.of(jsonUtilsJar)));
 
         List<String> duplicates = classpathHits("tech/krpc/util/JsonUtils.class");
@@ -281,6 +278,21 @@ abstract class AbstractJsonStrictMatrixTest {
 
     private static String codeSource(Class<?> type) {
         return type.getProtectionDomain().getCodeSource().getLocation().getPath();
+    }
+
+    /**
+     * A provenance input the Gradle task MUST have injected. Absent means the task wiring was
+     * bypassed (e.g. the class was run straight from an IDE), and an unbound run must not be
+     * mistaken for a bound one.
+     */
+    private static String requiredProperty(String key) {
+        String value = System.getProperty(key);
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("EXTMYB-STRICT-001: -D" + key + " was not set — run this"
+                    + " class through the strictMatrixTest / lenientMatrixTest Gradle tasks, which"
+                    + " bind it to the resolved rpc-common artifact");
+        }
+        return value;
     }
 
     private static String sha256(Path file) throws Exception {

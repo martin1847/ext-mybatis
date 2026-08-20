@@ -17,17 +17,26 @@ import org.junit.jupiter.api.Test;
  */
 class JsonStrictMatrixStrictModeTest extends AbstractJsonStrictMatrixTest {
 
+    /**
+     * Literal mode guard. Written out per class rather than shared: a helper taking an
+     * {@code expectStrict} flag would make the expected value conditional, which GR-009 forbids
+     * regardless of how literal the caller's argument is.
+     */
     @BeforeAll
     static void modeGuard() {
-        requireMode(true);
+        assertNull(System.getenv("KRPC_JSON_STRICT"),
+                "strictMatrixTest must fork with KRPC_JSON_STRICT absent from the environment");
+        assertTrue(observedStrict(), "the decoder resolved by this JVM must be the strict one");
     }
 
     // ------------------------------------------------------------------- harmful candidates
 
     /**
-     * KNOWN-POSITIVE GATE. Legacy rows holding {@code [{"legacyId":123}]} for a {@code String}
-     * field decoded fine before 1.2.0 and are REFUSED now. The lenient sibling of this test still
-     * accepts the same row, so the two states differ — the instrument can see the damage.
+     * KNOWN-POSITIVE GATE. A row holding {@code [{"legacyId":123}]} against a {@code String} field
+     * is REFUSED here and ACCEPTED by the lenient sibling of this test — same commit, same row,
+     * same query, two outcomes. That difference is what this measurement establishes; that the
+     * lenient outcome equals pre-1.2.0 behaviour is the kill switch's documented contract (krpc
+     * 1.2.0 CHANGELOG, #56), not something measured here — rpc-common 1.0.3 was never run.
      */
     @Test
     void integerIntoStringField_rejected() {

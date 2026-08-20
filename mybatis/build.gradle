@@ -58,6 +58,16 @@ def matrixEnvironment = { Map<String, String> overrides ->
     return env
 }
 
+// The rpc-common artifact this build actually resolved onto the test runtime classpath — the same
+// resolution `dependencyInsight --dependency rpc-common --configuration testRuntimeClasspath`
+// reports. Injected into each fork so the provenance guard can bind "the class we loaded" to "the
+// artifact the build resolved" instead of settling for "some jar". Lazy: an artifactView is not
+// resolved at configuration time.
+def rpcCommonCoordinate = "tech.krpc:rpc-common:$rpcVersion"
+def rpcCommonArtifact = configurations.testRuntimeClasspath.incoming.artifactView {
+    componentFilter { id -> id.displayName.startsWith('tech.krpc:rpc-common:') }
+}.files
+
 def registerMatrixTest = { String taskName, String mode, Map<String, String> overrides, String why ->
     tasks.register(taskName, Test) {
         group = 'verification'
@@ -68,6 +78,15 @@ def registerMatrixTest = { String taskName, String mode, Map<String, String> ove
         filter { includeTestsMatching matrixClasses[mode] }
         environment = matrixEnvironment(overrides)
         systemProperty 'strict.matrix.mode', mode
+        systemProperty 'strict.matrix.rpcCommonCoordinate', rpcCommonCoordinate
+        doFirst {
+            def jars = rpcCommonArtifact.files
+            if (jars.size() != 1) {
+                throw new GradleException("EXTMYB-STRICT-001: expected exactly one rpc-common artifact"
+                        + " on testRuntimeClasspath, resolved $jars")
+            }
+            systemProperty 'strict.matrix.rpcCommonJar', jars.first().absolutePath
+        }
         maxParallelForks = 1
         // The run also emits provenance evidence (build/strict-matrix-evidence/), which must
         // reflect THIS run rather than a cached one.

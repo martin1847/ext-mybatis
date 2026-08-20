@@ -1,6 +1,7 @@
 package tech.krpc.mybatis.type;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -11,24 +12,31 @@ import org.junit.jupiter.api.Test;
  * EXTMYB-STRICT-001 — the same 11 cells with the kill switch thrown: {@code KRPC_JSON_STRICT=false}.
  * Run by the {@code lenientMatrixTest} Gradle task.
  *
- * <p>Claim boundary: this is the kill switch's own documented semantics ("the pre-1.2 lenient
- * behaviour"), NOT a re-run against rpc-common 1.0.3. These results therefore establish a
- * strict-vs-lenient DIFFERENCE on one pinned rpc-common, not a measured upgrade regression.
+ * <p>Claim boundary: what this class measures is the behaviour of rpc-common 1.2.0 with the kill
+ * switch thrown. The krpc 1.2.0 CHANGELOG (#56) describes that state as the pre-1.2 behaviour
+ * ("Rollback needs no code change: {@code KRPC_JSON_STRICT=false}"), but rpc-common 1.0.3 was
+ * never run here, so pre-1.2 equivalence is a cited contract, not a measurement. These results
+ * establish a strict-vs-lenient DIFFERENCE on one pinned rpc-common — not an upgrade regression.
  *
  * <p>SNAPSHOT CHARACTERIZATION — these expectations record today's behaviour, not a promise.
  */
 class JsonStrictMatrixLenientModeTest extends AbstractJsonStrictMatrixTest {
 
+    /**
+     * Literal mode guard; see the strict sibling for why it is not a shared parameterized helper.
+     */
     @BeforeAll
     static void modeGuard() {
-        requireMode(false);
+        assertEquals("false", System.getenv("KRPC_JSON_STRICT"),
+                "lenientMatrixTest must fork with KRPC_JSON_STRICT=false");
+        assertFalse(observedStrict(), "the decoder resolved by this JVM must be the lenient one");
     }
 
     // ------------------------------------------------------------------- harmful candidates
 
     /**
      * KNOWN-POSITIVE GATE, other half: the row the strict task refuses is accepted here and the
-     * number is silently stringified. Same commit, same row, two outcomes.
+     * number is silently stringified. Same commit, same row, same query, two outcomes.
      */
     @Test
     void integerIntoStringField_silentlyStringified() {
